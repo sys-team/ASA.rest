@@ -1,22 +1,34 @@
-create or replace function ar.rest(@url long varchar)
+create or replace function ar.rest(
+    @url long varchar,
+    @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
+    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
+    @orderBy long varchar default isnull(http_variable('order-by:'),'id')
+)
 returns xml
 begin
     declare @response xml;
+    declare @varName long varchar;
+    declare @varValue long varchar;
     declare @error long varchar;
     declare @entity long varchar;
     declare @entityId integer;
     declare @isSp integer;
-    declare @isId integer;
-    declare @isXid integer;
     declare @code long varchar;
     declare @id long varchar;
-    declare @pageSize integer;
-    declare @pageNumber integer;
-    declare @orderBy long varchar;
     declare @recordId bigint;
     declare @recordXid uniqueidentifier;
     declare @sql long varchar;
+    declare @rawData xml;
     
+    declare local temporary table #filter(attribute long varchar,
+                                          value long varchar);
+    
+    set @code = replace(http_header('Authorization'), 'Bearer ', '');
+    -- Authorization
+    
+    /////////////
+    
+    -- url elements
     select entity,
            id
       into @entity, @id
@@ -24,15 +36,6 @@ begin
            with (entity long varchar, id long varchar)
            option(delimited by '/') as t;
            
-    set @pageSize = if isnumeric(http_variable('page-size')) = 1 then http_variable('page-size') else 10 endif;
-    set @pageNumber = if isnumeric(http_variable('page-number')) = 1 then http_variable('page-number') else 1 endif;
-    set @orderBy = isnull(http_variable('order-by'),'id');
-    
-    set @code = replace(http_header('Authorization'), 'Bearer ', '');
-
-    -- Authorization
-    
-    
     -- parms
     if @id is not null then
         if isnumeric(@id) = 1 then
@@ -41,6 +44,22 @@ begin
             set @recordXid = util.strtoxid(@id);
         end if;        
     end if;
+    --  http variables
+    set @varName = next_http_variable(null);
+    
+    while @varName is not null loop
+        set @varValue = http_variable(@varName);
+        
+        if @varName not like '%:' and @varName not in ('url') then
+            insert into #filter with auto name
+            select @varName as attribute,
+                   @varValue as value;
+        end if;
+
+        set @varName = next_http_variable(@varName);
+        
+    end loop;
+    
 
     set @entityId = (select sp.proc_id
                        from sys.sysprocedure sp join sys.sysuserperm su on sp.creator = su.user_id
@@ -63,74 +82,43 @@ begin
     end if;
     
     if @isSp = 0 then
-    
-        set @isId = (select count(*)
-                       from sys.syscolumn
-                      where table_id = @entityId
-                        and column_name in ('id'));
-                        
-        set @isXid = (select count(*)
-                       from sys.syscolumn
-                      where table_id = @entityId
-                        and column_name in ('xid'));                   
+                       
+        set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
+                   ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
+                   ' * '+
+                   'from ' + @entity +
+                   if @recordId is not null then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
+                   if @recordXid is not null then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
+                   if @recordXid is null and @recordId is null and (select count(*) from #filter) <> 0 then ' where ' else '' endif +
+                   (select list(attribute +'='''+value+'''', ' and ') from #filter) + 
+                   ' order by '+ @orderBy + ' for xml raw, elements';
+                   
+        message 'ar.rest @sql for @rawData = ', @sql;
+        set @sql = 'set @rawData = (' + @sql +')';
+        
+        execute immediate @sql;
     
         set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
-                            if @isId <> 0 then ', id as "id"' else '' endif +
-                            if @isXid <> 0 then ', xid as "xid"' else '' endif +' ),' +
+                            ', id as "id"' +
+                            ', xid as "xid"' +' ),' +
                             '(select xmlagg(xmlelement(''value'', ' +
                             'xmlattributes(name as "name") , value)) ' +
-                            'from openxml(xmlelement(''root'', r) ,''/root/*'') '+
-                            'with ( name long varchar ''@mp:localname'', value long varchar ''.'')' + 
+                            'from openxml(r ,''/row/*'') '+
+                            'with ( name long varchar ''@mp:localname'', value long varchar ''.'')' +
+                            ' where name not in (''id'', ''xid'') '+
                             ')' + 
                             ')) from ' +
-                    (select '(select top ' + cast(@pageSize as varchar(64)) + ' ' +
-                            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-                            ' xmlforest(' + list(column_name) + ') as r'
-                            + if @isId <> 0 then ', id' else '' endif
-                            + if @isXid <> 0 then ', xid' else '' endif
-                       from sys.syscolumn
-                      where table_id = @entityId
-                        and column_name not in ('id', 'xid')) +
-                    ' from ' + @entity +
-                    if @recordId is not null and @isId <> 0 then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
-                    if @recordXid is not null and @isXid <> 0 then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
-                    ' order by '+ @orderBy +') as t';
+                    '(select r, id, xid '+
+                    ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
+                    ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
 
     elseif @isSp = 1 then
     
-         set @isId = (select count(*)
-                       from sys.sysprocparm
-                      where proc_id = @entityId
-                        and parm_mode_out ='Y'
-                        and parm_name in ('id'));
-                        
-        set @isXid = (select count(*)
-                       from sys.sysprocparm
-                      where proc_id = @entityId
-                        and parm_mode_out ='Y'
-                        and parm_name in ('xid'));    
-    
-        set  @sql = 'select xmlagg(d) from (' +
-                    'select top ' + cast(@pageSize as varchar(64)) + ' ' +
-                    'start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-                    'xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"'
-                    + if @isId <> 0 then ', id as "id"' else '' endif +
-                    + if @isXid <> 0 then ', xid as "xid"' else '' endif +' ),' +
-                    (select 'xmlconcat('+
-                            list(' if ' + parm_name + ' is not null then  xmlelement(''value'', xmlattributes('''+parm_name+''' as "name"),'+parm_name +') else null endif') +')'
-                       from sys.sysprocparm
-                      where proc_id = @entityId
-                        and parm_mode_out ='Y'
-                        and parm_name not in ('id', 'xid')) +
-                    ') as d from ' + @entity + '()' +
-                    if @recordId is not null and @isId <> 0 then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
-                    if @recordXid is not null and @isXid <>0 then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
-                    ' order by '+ @orderBy +
-                    ') as t';
+        set @sql = 'select ''noy implemented yet''';
     
     end if;
     
-    message 'ar.rest @sql = ', @sql;
+    --message 'ar.rest @sql = ', @sql;
     set @sql = 'set @response = (' + @sql +')';
     
     execute immediate @sql;
