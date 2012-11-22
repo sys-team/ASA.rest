@@ -6,10 +6,13 @@ begin
     declare @entity long varchar;
     declare @entityId integer;
     declare @isSp integer;
+    declare @isId integer;
+    declare @isXid integer;
     declare @code long varchar;
     declare @id long varchar;
     declare @pageSize integer;
     declare @pageNumber integer;
+    declare @orderBy long varchar;
     declare @recordId bigint;
     declare @recordXid uniqueidentifier;
     declare @sql long varchar;
@@ -23,6 +26,7 @@ begin
            
     set @pageSize = if isnumeric(http_variable('page-size')) = 1 then http_variable('page-size') else 10 endif;
     set @pageNumber = if isnumeric(http_variable('page-number')) = 1 then http_variable('page-number') else 1 endif;
+    set @orderBy = isnull(http_variable('order-by'),'id');
     
     set @code = replace(http_header('Authorization'), 'Bearer ', '');
 
@@ -60,23 +64,73 @@ begin
     
     if @isSp = 0 then
     
-        set  @sql = 'select xmlagg(d) from (' +
-                    'select top (' + cast(@pageSize as varchar(64)) + ') ' +
-                    'start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + 
-                    'xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"),' +
-                    (select 'xmlconcat('+ list( 'xmlelement(''column'', xmlattributes('''+column_name+''' as "name"),'+column_name +')') +')'
+        set @isId = (select count(*)
                        from sys.syscolumn
-                      where table_id = @entityId) +
-                    ') as d from ' + @entity +
-                    if @recordId is not null then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
-                    if @recordXid is not null then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
-                    ' order by id'+
-                    ') as t';
+                      where table_id = @entityId
+                        and column_name in ('id'));
+                        
+        set @isXid = (select count(*)
+                       from sys.syscolumn
+                      where table_id = @entityId
+                        and column_name in ('xid'));                   
+    
+        set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
+                            if @isId <> 0 then ', id as "id"' else '' endif +
+                            if @isXid <> 0 then ', xid as "xid"' else '' endif +' ),' +
+                            '(select xmlagg(xmlelement(''value'', ' +
+                            'xmlattributes(name as "name") , value)) ' +
+                            'from openxml(xmlelement(''root'', r) ,''/root/*'') '+
+                            'with ( name long varchar ''@mp:localname'', value long varchar ''.'')' + 
+                            ')' + 
+                            ')) from ' +
+                    (select '(select top ' + cast(@pageSize as varchar(64)) + ' ' +
+                            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
+                            ' xmlforest(' + list(column_name) + ') as r'
+                            + if @isId <> 0 then ', id' else '' endif
+                            + if @isXid <> 0 then ', xid' else '' endif
+                       from sys.syscolumn
+                      where table_id = @entityId
+                        and column_name not in ('id', 'xid')) +
+                    ' from ' + @entity +
+                    if @recordId is not null and @isId <> 0 then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
+                    if @recordXid is not null and @isXid <> 0 then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
+                    ' order by '+ @orderBy +') as t';
 
+    elseif @isSp = 1 then
+    
+         set @isId = (select count(*)
+                       from sys.sysprocparm
+                      where proc_id = @entityId
+                        and parm_mode_out ='Y'
+                        and parm_name in ('id'));
+                        
+        set @isXid = (select count(*)
+                       from sys.sysprocparm
+                      where proc_id = @entityId
+                        and parm_mode_out ='Y'
+                        and parm_name in ('xid'));    
+    
+        set  @sql = 'select xmlagg(d) from (' +
+                    'select top ' + cast(@pageSize as varchar(64)) + ' ' +
+                    'start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
+                    'xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"'
+                    + if @isId <> 0 then ', id as "id"' else '' endif +
+                    + if @isXid <> 0 then ', xid as "xid"' else '' endif +' ),' +
+                    (select 'xmlconcat('+
+                            list(' if ' + parm_name + ' is not null then  xmlelement(''value'', xmlattributes('''+parm_name+''' as "name"),'+parm_name +') else null endif') +')'
+                       from sys.sysprocparm
+                      where proc_id = @entityId
+                        and parm_mode_out ='Y'
+                        and parm_name not in ('id', 'xid')) +
+                    ') as d from ' + @entity + '()' +
+                    if @recordId is not null and @isId <> 0 then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
+                    if @recordXid is not null and @isXid <>0 then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
+                    ' order by '+ @orderBy +
+                    ') as t';
     
     end if;
     
-    --message 'ar.rest @sql = ', @sql;
+    message 'ar.rest @sql = ', @sql;
     set @sql = 'set @response = (' + @sql +')';
     
     execute immediate @sql;
