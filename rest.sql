@@ -23,7 +23,7 @@ begin
     declare local temporary table #filter(attribute long varchar,
                                           value long varchar);
     
-    set @code = replace(http_header('Authorization'), 'Bearer ', '');
+    set @code = isnull(replace(http_header('Authorization'), 'Bearer ', ''), http_variable('code'));
     -- Authorization
     
     /////////////
@@ -40,10 +40,21 @@ begin
     if @id is not null then
         if isnumeric(@id) = 1 then
             set @recordId = cast(@id as bigint);
+            
+            insert into #filter with auto name
+            select 'id' as attribute,
+                   cast(@recordId as long varchar) as value;
         else
             set @recordXid = util.strtoxid(@id);
+            
+            insert into #filter with auto name
+            select 'xid' as attribute,
+                   cast(@recordXId as long varchar) as value
+             where @recordXid is not null;
+            
         end if;        
     end if;
+    
     --  http variables
     set @varName = next_http_variable(null);
     
@@ -81,42 +92,59 @@ begin
         raiserror 55555 'Entity %1 not found', @entity;
     end if;
     
+    -- sql
+    set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
+               ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
+               ' * ';
+    
     if @isSp = 0 then
                        
-        set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
-                   ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-                   ' * '+
-                   'from ' + @entity +
-                   if @recordId is not null then ' where id = ' + cast(@recordId as varchar(64)) else '' endif +
-                   if @recordXid is not null then ' where xid = ''' + uuidtostr(@recordXid) + '''' else '' endif +
-                   if @recordXid is null and @recordId is null and (select count(*) from #filter) <> 0 then ' where ' else '' endif +
-                   (select list(attribute +'='''+value+'''', ' and ') from #filter) + 
+        set @sql = @sql +
+                   'from [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + ']' +
+                   if (select count(*) from #filter) <> 0
+                   then ' where ' +  (select list('['+attribute +']='''+value+'''', ' and ') from #filter)
+                   else '' endif +
                    ' order by '+ @orderBy + ' for xml raw, elements';
-                   
-        message 'ar.rest @sql for @rawData = ', @sql;
-        set @sql = 'set @rawData = (' + @sql +')';
-        
-        execute immediate @sql;
     
-        set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
-                            ', id as "id"' +
-                            ', xid as "xid"' +' ),' +
-                            '(select xmlagg(xmlelement(''value'', ' +
-                            'xmlattributes(name as "name") , value)) ' +
-                            'from openxml(r ,''/row/*'') '+
-                            'with ( name long varchar ''@mp:localname'', value long varchar ''.'')' +
-                            ' where name not in (''id'', ''xid'') '+
-                            ')' + 
-                            ')) from ' +
-                    '(select r, id, xid '+
-                    ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
-                    ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
-
     elseif @isSp = 1 then
     
-        set @sql = 'select ''noy implemented yet''';
-    
+        set @sql = @sql +
+                   'from [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + ']' +
+                   ' (' +
+                   (select list('['+attribute +']='''+value+'''')
+                      from #filter
+                     where attribute in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId)) +
+                   ') ' +
+                   if (select count(*)
+                         from #filter
+                        where attribute not in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId)) <> 0
+                   then ' where ' +
+                   (select list('['+attribute +']='''+value+'''', ' and ')
+                      from #filter
+                     where attribute not in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId))
+                   else '' endif +
+                   ' order by '+ @orderBy + ' for xml raw, elements';     
+
     end if;
+    
+    --message 'ar.rest @sql for @rawData = ', @sql;
+    set @sql = 'set @rawData = (' + @sql +')';
+    
+    execute immediate @sql;
+    
+    set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
+                    ', id as "id"' +
+                    ', xid as "xid"' +' ),' +
+                    '(select xmlagg(xmlelement(''value'', ' +
+                    'xmlattributes(name as "name") , value)) ' +
+                    'from openxml(r ,''/row/*'') '+
+                    'with ( name long varchar ''@mp:localname'', value long varchar ''.'')' +
+                    ' where name not in (''id'', ''xid'') '+
+                    ')' + 
+                    ')) from ' +
+            '(select r, id, xid '+
+            ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
+            ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
     
     --message 'ar.rest @sql = ', @sql;
     set @sql = 'set @response = (' + @sql +')';
