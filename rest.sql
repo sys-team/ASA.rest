@@ -23,10 +23,9 @@ begin
     declare local temporary table #filter(attribute long varchar,
                                           value long varchar);
     
-    set @code = isnull(replace(http_header('Authorization'), 'Bearer ', ''), http_variable('code'));
-    -- Authorization
+    set @code = replace(http_header('Authorization'), 'Bearer ', '');
     
-    /////////////
+    --message 'ar.rest code = ', @code;
     
     -- url elements
     select entity,
@@ -35,6 +34,17 @@ begin
       from openstring(value @url)
            with (entity long varchar, id long varchar)
            option(delimited by '/') as t;
+           
+    -- Authorization
+    if ar.authorize(@code, @entity) <> 1 then
+        set @response = xmlelement('response', xmlelement('error','Not autorized'));
+        return @response;
+    end if;
+    
+    if @entity is null then
+        set @response = xmlelement('response', xmlelement('error','Entity requered'));
+        return @response;
+    end if;   
            
     -- parms
     if @id is not null then

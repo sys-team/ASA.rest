@@ -1,11 +1,26 @@
-create or replace function ar.authorize(@code long varchar)
+create or replace function ar.authorize(@code long varchar, @entity long varchar)
 returns integer
 begin
-    declare @result integer;
+    declare @roles xml;
     
-    set @result = ()
+    set @roles = ar.queryRoles(@code);
     
-    
-    return @result;
-    
+    if exists(select *
+                from openxml(@roles, '/*:response/*:roles/*:role')
+                     with(code long varchar 'code')
+               where code = @entity
+                  or code = '*') then
+                   
+        return 1;
+    end if;
+        
+    if exists(select *
+                from openxml(@roles, '/*:response/*:account')
+                     with(username long varchar 'username', email long varchar 'email')
+               where username like 'lesha%'
+                  or email like 'lesha%') then
+        return 1;
+    end if;
+
+    return 0;  
 end;
