@@ -4,7 +4,7 @@ create or replace function ar.put(
 returns xml
 begin
     declare @response xml;
-    declare @code long varchar;
+    declare @error long varchar;
     declare @sql long varchar;
     declare @entity long varchar;
     declare @id long varchar;
@@ -13,28 +13,21 @@ begin
     declare @varName long varchar;
     declare @varValue long varchar;
     
-    declare local temporary table #attributes(attribute long varchar,
-                                              value long varchar);
-    
-    set @code = replace(http_header('Authorization'), 'Bearer ', '');
-   
+    declare local temporary table #fk(entityName long varchar,
+                                      primaryColumn long varchar,
+                                      foreignColumn liong varchar,
+                                      value long varchar);
+                                            
     -- url elements
     select entity,
            id
       into @entity, @id
       from openstring(value @url)
-           with (entity long varchar, id long varchar)
+           with (serv long varchar, entity long varchar, id long varchar)
            option(delimited by '/') as t;
            
-    -- Authorization
-    /*
-    if ar.authorize(@code, @entity) <> 1 then
-        set @response = xmlelement('response', xmlelement('error','Not autorized'));
-        return @response;
-    end if; */
-           
     if @entity is null then
-        set @response = xmlelement('response', xmlelement('error','Entity requered'));
+        set @response = xmlelement('response', xmlelement('error','Entity required'));
         return @response;
     end if;
     
@@ -47,21 +40,6 @@ begin
         end if;        
     end if;
     
-    --  http variables
-    set @varName = next_http_variable(null);
-    
-    while @varName is not null loop
-        set @varValue = http_variable(@varName);
-        
-        if @varName not like '%:' and @varName not in ('url') then
-            insert into #attributes with auto name
-            select @varName as attribute,
-                   @varValue as value;
-        end if;
-
-        set @varName = next_http_variable(@varName);
-        
-    end loop;
     
     if @recordXid is not null then
         set @sql = 'set @recordId = (select id from [' + left(@entity, locate(@entity,'.') -1) + '].[' +
@@ -69,19 +47,34 @@ begin
         execute immediate @sql;
     end if;
     
+    -- fks
+    if @entityType = 'table' then
+        insert into #fk with auto name
+        select entityName,
+               primaryColumn,
+               foreignColumn
+          from ar.fkList(@entityId);
+          
+    end if;
+    
     set @sql = 'insert into [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) +'] '+
                ' on existing update with auto name '+
                ' select ' +
-               (select list(''''+value+''' as [' + attribute + ']')
-                  from #attribute) +
-                + if @recordId is null then ' , null' else ', ' + cast(@recordId as varchar(24)) end if + ' as id ';
+               (select list(''''+value+''' as [' + name + ']')
+                  from #variable
+                 where name <> 'url'
+                   and name not like '%:') +
+                + if (select count(*)
+                        from #variable
+                       where name <> 'url'
+                         and name not like '%:') <> 0 then ',' else '' endif 
+                + if @recordId is null then ' null' else ' ' + cast(@recordId as varchar(24)) end if + ' as id ';
+                
+    message 'ar.put @sql = ', @sql;
                 
     execute immediate @sql;
     
-    
-
-    
-    
     return @response;
+    
 end
 ;
