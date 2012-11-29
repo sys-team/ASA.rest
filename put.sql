@@ -12,11 +12,11 @@ begin
     declare @recordXid uniqueidentifier;
     declare @varName long varchar;
     declare @varValue long varchar;
+    declare @fkId integer;
     
     declare local temporary table #fk(entityName long varchar,
                                       primaryColumn long varchar,
-                                      foreignColumn liong varchar,
-                                      value long varchar);
+                                      foreignColumn long varchar);
                                             
     -- url elements
     select entity,
@@ -49,11 +49,32 @@ begin
     
     -- fks
     if @entityType = 'table' then
+    
         insert into #fk with auto name
         select entityName,
                primaryColumn,
                foreignColumn
-          from ar.fkList(@entityId);
+          from ar.fkList(@entityId)
+         where primaryColumn = 'id';
+         
+        for lloop as ccur cursor for
+        select v.value as c_value,
+               v.name as c_name,
+               f.entityName as c_entityName               
+          from #variable v join #fk f on v.name = f.foreignColumn
+         where util.strtoxid(v.value) is not null 
+        do
+        
+            set @sql = 'set @fkId = (' +
+                       'select id from ' + c_entityName + ' where xid = ''' + c_value +''')';
+            
+            execute immediate @sql;
+            
+            update #variable
+               set value = @fkId
+             where name = c_name;
+        
+        end for
           
     end if;
     
@@ -67,10 +88,12 @@ begin
                 + if (select count(*)
                         from #variable
                        where name <> 'url'
-                         and name not like '%:') <> 0 then ',' else '' endif 
-                + if @recordId is null then ' null' else ' ' + cast(@recordId as varchar(24)) end if + ' as id ';
+                         and name not like '%:') <> 0  and not exists (select * from #variable where name = 'id') then ',' else '' endif
+                + if not exists (select * from #variable where name = 'id') then
+                    if @recordId is null then ' null' else ' ''' + cast(@recordId as varchar(24)) + '''' end if + ' as id '
+                  else '' endif;
                 
-    message 'ar.put @sql = ', @sql;
+    --message 'ar.put @sql = ', @sql;
                 
     execute immediate @sql;
     

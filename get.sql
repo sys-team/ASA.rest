@@ -16,6 +16,11 @@ begin
     declare @sql long varchar;
     declare @rawData xml;
     
+    declare local temporary table #fk(entityName long varchar,
+                                  primaryColumn long varchar,
+                                  foreignColumn long varchar);
+                                            
+    
     -- url elements
     select entity,
            id
@@ -51,6 +56,22 @@ begin
     if @entityId is null then
         raiserror 55555 'Entity %1! not found', @entity;
     end if;
+    
+    insert into #fk with auto name
+    select entityName,
+           primaryColumn,
+           foreignColumn
+      from ar.fkList(@entityId)
+     where primaryColumn = 'id'
+       and ar.isColumn(entityName, 'id') = 1
+       and ar.isColumn(entityName, 'xid') = 1;
+       
+    -- sordgoods!!
+    delete from #fk
+     where entityName in (select entityName
+                            from #fk
+                           group by entityName
+                          having count(distinct primaryColumn) <>1);
     
     -- sql
     set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
@@ -99,26 +120,31 @@ begin
     execute immediate @sql;
     
     set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
-                    ', id as "id"' +
                     ', xid as "xid"' +' ),' +
-                    '(select xmlagg(xmlelement(''value'', ' +
-                    'xmlattributes(name as "name") , value)) ' +
+                    '(select xmlagg(xmlelement(' +
+                    'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
+                    'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , value)) ' +
                     'from openxml(r ,''/row/*'') '+
-                    'with ( name long varchar ''@mp:localname'', value long varchar ''.'')' +
-                    ' where name not in (''id'', ''xid'') '+
+                    'with ( name long varchar ''@mp:localname'', value long varchar ''.'') as r ' +
+                    ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
+                    ' list(primaryColumn order by entityName) as parentColumns ' +
+                    ' from #fk group by foreignColumn) as f '+
+                    ' on r.name = f.foreignColumn ' +
+                    ' outer apply (select xid from ar.xidById(r.[name],r.[value]))' +
+                    ' as lat' +
+                    ' where r.name not in (''xid'') '+
                     ')' + 
                     ')) from ' +
             '(select r, id, xid '+
             ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
             ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
     
-    --message 'ar.rest @sql = ', @sql;
+    message 'ar.rest @sql = ', @sql;
     set @sql = 'set @response = (' + @sql +')';
     
     execute immediate @sql;
     
     return @response;
-    
 
 end
 ;

@@ -3,7 +3,7 @@ begin
 
     select distinct
            u.user_name + '.' + t.table_name as entityName,
-           pcol.column_name as ptimaryColumn,
+           pcol.column_name as primaryColumn,
            fcol.column_name as foreignColumn
       from sys.sysfkey fk join sys.systable t on fk.primary_table_id = t.table_id
                           join sys.sysuserperm u on u.user_id = t.creator
