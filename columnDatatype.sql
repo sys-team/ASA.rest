@@ -18,7 +18,8 @@ begin
             set @result = (select d.domain_name
                              from sys.sysprocparm p join sys.sysdomain d on p.domain_id = d.domain_id
                             where p.proc_id = @entityId
-                              and p.parm_name = @columnName);
+                              and p.parm_name = @columnName
+                              and p.parm_mode_out = 'Y');
     end case;
     
     set @result = dbo.dataTypeName(@result);

@@ -47,20 +47,28 @@ begin
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
     if varexists('@entityType') = 0 then create variable @entityType varchar(128) end if;
     
-    set @entityId = (select sp.proc_id
-                       from sys.sysprocedure sp join sys.sysuserperm su on sp.creator = su.user_id
-                      where sp.proc_name =  substr(@entity, locate(@entity,'.') +1)
-                        and su.user_name =  left(@entity, locate(@entity,'.') -1));
-                        
-    if @entityId is not null then      
-        set @entityType = 'sp';
+    set @entityId = (select id
+                       from ar.collection
+                      where code = @entity);
+                      
+    if @entityId is not null then
+        set @entityType = 'collection';
     else
-        set @entityType = 'table';
-        
-        set @entityId = (select st.table_id
-                          from sys.systable st join sys.sysuserperm su on st.creator = su.user_id
-                         where st.table_name =  substr(@entity, locate(@entity,'.') +1)
-                           and su.user_name =  left(@entity, locate(@entity,'.') -1));
+        set @entityId = (select sp.proc_id
+                           from sys.sysprocedure sp join sys.sysuserperm su on sp.creator = su.user_id
+                          where sp.proc_name =  substr(@entity, locate(@entity,'.') +1)
+                            and su.user_name =  left(@entity, locate(@entity,'.') -1));
+                            
+        if @entityId is not null then      
+            set @entityType = 'sp';
+        else
+            set @entityType = 'table';
+            
+            set @entityId = (select st.table_id
+                              from sys.systable st join sys.sysuserperm su on st.creator = su.user_id
+                             where st.table_name =  substr(@entity, locate(@entity,'.') +1)
+                               and su.user_name =  left(@entity, locate(@entity,'.') -1));
+        end if;
     end if;
            
     -- Authorization
@@ -83,7 +91,8 @@ begin
                                                          now() as "ts",
                                                          @cts as "cts",
                                                          @@servername as "servername",
-                                                         db_name() as "dbname"), @response);
+                                                         db_name() as "dbname",
+                                                         property('machinename') as "host"), @response);
                                                          
     update ar.log
        set response = left(@response,65536)

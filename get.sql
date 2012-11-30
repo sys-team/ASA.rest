@@ -78,14 +78,14 @@ begin
                ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
                ' * ';
     
+    -- message 'ar.get @entityType = ', @entityType;
     if @entityType = 'table' then
                        
-        set @sql = @sql +
-                   'from [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + ']' +
-                   if (select count(*) from #variable where name <> 'url' and name not like '%:') <> 0
-                   then ' where ' +  (select list('[' + name +']='''+value+'''', ' and ') from #variable where name <> 'url' and name not like '%:')
-                   else '' endif +
-                   ' order by '+ @orderBy + ' desc for xml raw, elements';
+        set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy);
+        
+    elseif @entityType = 'collection' then
+    
+        set @response = ar.getCollection(@entityId, @pageSize, @pageNumber);
     
     elseif @entityType = 'sp' then
     
@@ -110,39 +110,43 @@ begin
                        and name <> 'url'
                        and name not like '%:')
                    else '' endif +
-                   ' order by '+ @orderBy + ' desc for xml raw, elements';     
+                   ' order by '+ @orderBy + ' desc for xml raw, elements';
+                   
+        --message 'ar.rest @sql for @rawData = ', @sql;
+        set @sql = 'set @rawData = (' + @sql +')';
+        
+        execute immediate @sql;
+        
+        
+        set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
+                        ', xid as "xid"' +' ),' +
+                        '(select xmlagg(xmlelement(' +
+                        'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
+                        'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , value)) ' +
+                        'from openxml(r ,''/row/*'') '+
+                        'with ( name long varchar ''@mp:localname'', value long varchar ''.'') as r ' +
+                        ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
+                        ' list(primaryColumn order by entityName) as parentColumns ' +
+                        ' from #fk group by foreignColumn) as f '+
+                        ' on r.name = f.foreignColumn ' +
+                        ' outer apply (select xid from ar.xidById(r.[name],r.[value]))' +
+                        ' as lat' +
+                        ' where r.name not in (''xid'') '+
+                        ')' + 
+                        ')) from ' +
+                '(select r, id, xid '+
+                ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
+                ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
+        
+        --message 'ar.rest @sql = ', @sql;
+        set @sql = 'set @response = (' + @sql +')';
+        
+        execute immediate @sql;
+    
 
     end if;
     
-    --message 'ar.rest @sql for @rawData = ', @sql;
-    set @sql = 'set @rawData = (' + @sql +')';
-    
-    execute immediate @sql;
-    
-    set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
-                    ', xid as "xid"' +' ),' +
-                    '(select xmlagg(xmlelement(' +
-                    'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
-                    'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , value)) ' +
-                    'from openxml(r ,''/row/*'') '+
-                    'with ( name long varchar ''@mp:localname'', value long varchar ''.'') as r ' +
-                    ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
-                    ' list(primaryColumn order by entityName) as parentColumns ' +
-                    ' from #fk group by foreignColumn) as f '+
-                    ' on r.name = f.foreignColumn ' +
-                    ' outer apply (select xid from ar.xidById(r.[name],r.[value]))' +
-                    ' as lat' +
-                    ' where r.name not in (''xid'') '+
-                    ')' + 
-                    ')) from ' +
-            '(select r, id, xid '+
-            ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
-            ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
-    
-    message 'ar.rest @sql = ', @sql;
-    set @sql = 'set @response = (' + @sql +')';
-    
-    execute immediate @sql;
+
     
     return @response;
 
