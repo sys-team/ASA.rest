@@ -29,7 +29,7 @@ begin
            with (action long varchar, entity long varchar, id long varchar)
            option(delimited by '/') as t;
            
-    set @authorized = 1; -- ar.authorize(@code, @entity);
+    set @authorized = ar.authorize(@code, @entity);
     
     -- http variables
     insert into #variable with auto name

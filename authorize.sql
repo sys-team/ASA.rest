@@ -8,7 +8,7 @@ begin
     if exists(select *
                 from openxml(@roles, '/*:response/*:roles/*:role')
                      with(code long varchar 'code')
-               where code = @entity
+               where code = 'authenticated' --@entity
                   or code = '*') then
                    
         return 1;

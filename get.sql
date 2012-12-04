@@ -89,6 +89,8 @@ begin
     
     elseif @entityType = 'sp' then
     
+        --set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy);
+    
         set @sql = @sql +
                    'from [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + ']' +
                    ' (' +
