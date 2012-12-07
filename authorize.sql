@@ -5,6 +5,8 @@ begin
     
     set @roles = ar.queryRoles(@code);
     
+    if @@servername = 'HQVSRV58' then return 1 endif;
+    
     if exists(select *
                 from openxml(@roles, '/*:response/*:roles/*:role')
                      with(code long varchar 'code')

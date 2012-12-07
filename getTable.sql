@@ -4,7 +4,7 @@ create or replace function ar.getTable(
     @pageSize integer,
     @pageNumber integer,
     @orderBy long varchar default 'id',
-    @whereClause long varchar default null
+    @collection integer default null
 )
 returns xml
 begin
@@ -38,14 +38,19 @@ begin
            
     set @sql = @sql +
            'from [' + left(@entityName, locate(@entityName,'.') -1) + '].[' + substr(@entityName, locate(@entityName,'.') +1) + ']' +
-           if @whereClause is not null then
-                'where '+ @whereClause 
+           if @collection is not null then
+                'where xid in ('+ isnull((select nullif(list('''' + uuidtostr(elementXid) + ''''),'')
+                                            from ar.element
+                                           where collection = @collection
+                                             and tableName = @entityName),'null') + ') '
            else
                 if (select count(*) from #variable where name <> 'url' and name not like '%:') <> 0
                 then ' where ' +  (select list('[' + name +']='''+value+'''', ' and ') from #variable where name <> 'url' and name not like '%:')
                 else '' endif
            endif +
            ' order by '+ @orderBy + ' desc for xml raw, elements';
+           
+    --message 'ag.getTable @sql = ', @sql;
            
     set @sql = 'set @rawData = (' + @sql +')';
     

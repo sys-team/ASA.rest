@@ -22,7 +22,7 @@ begin
                               and p.parm_mode_out = 'Y');
     end case;
     
-    set @result = dbo.dataTypeName(@result);
+    set @result = util.dataTypeName(@result);
     
     return @result;
     

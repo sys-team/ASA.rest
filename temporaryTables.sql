@@ -4,6 +4,7 @@ create global temporary table ar.log(
     variables long varchar,
     response xml,
     requestor varchar(1024) default current user,
+    code varchar(1024),
 
     callerIP varchar(128) default connection_property('ClientNodeAddress'),
 

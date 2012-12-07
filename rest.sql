@@ -21,6 +21,7 @@ begin
  
     -- authorization   
     set @code = replace(http_header('Authorization'), 'Bearer ', '');
+    --message 'ar.rest code = ', @code;
     
     select action,
            entity
@@ -40,7 +41,8 @@ begin
     insert into ar.log with auto name
     select @xid as xid,
            @url as url,
-           list(name +'='+value, '&') as variables
+           list(name +'='+value, '&') as variables,
+           @code as code
       from #variable;
       
     -- entity id & entity type       
@@ -49,7 +51,7 @@ begin
     
     set @entityId = (select id
                        from ar.collection
-                      where code = @entity);
+                      where name = @entity);
                       
     if @entityId is not null then
         set @entityType = 'collection';
@@ -82,7 +84,10 @@ begin
                 set @response = ar.put(@url);
             when 'make' then
                 set @response = ar.make(@url);
-                
+            when 'addElement' then
+                set @response = ar.addElement(@url);
+            when 'link' then
+                set @response = ar.link(@url);
         end case;
     end if;
     
