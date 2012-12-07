@@ -5,6 +5,7 @@ returns xml
 begin
     declare @response xml;
     declare @error long varchar;
+    declare @errorCode long varchar;
     declare @code long varchar;
     declare @entity long varchar;
     declare @action long varchar;
@@ -111,7 +112,14 @@ begin
         when others then
         
             set @error = errormsg();
-            set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns", now() as "ts"), xmlelement('error', @error));
+            if @error like 'RAISERROR executed: %' then
+                set @errorCode =  trim(substring(@error, locate(@error,'RAISERROR executed: ') + length('RAISERROR executed: ')));
+            end if;
+
+                    
+            
+            set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns",now() as "ts"),
+                                                   xmlelement('error', xmlattributes(@errorCode as "code"), @error));
             
             update ar.log
                set response = @response

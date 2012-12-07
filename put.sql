@@ -13,6 +13,7 @@ begin
     declare @varName long varchar;
     declare @varValue long varchar;
     declare @fkId integer;
+    declare @updateSp long varchar;
     
     declare local temporary table #fk(entityName long varchar,
                                       primaryColumn long varchar,
@@ -78,27 +79,62 @@ begin
           
     end if;
     
-    set @sql = 'insert into [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) +'] '+
-               ' on existing update with auto name '+
-               ' select ' +
-               (select list(''''+value+''' as [' + name + ']')
-                  from #variable
-                 where name <> 'url'
-                   and name not like '%:'
-                   and ar.isColumn(@entity, name) = 1) +
-                + if (select count(*)
-                        from #variable
-                       where name <> 'url'
-                         and name not like '%:') <> 0  and not exists (select * from #variable where name = 'id') then ',' else '' endif
-                + if not exists (select * from #variable where name = 'id') then
-                    if @recordId is null then ' null' else ' ''' + cast(@recordId as varchar(24)) + '''' end if + ' as id '
-                  else '' endif;
-                
-    --message 'ar.put @sql = ', @sql;
-                
-    execute immediate @sql;
+    if @recordId is not null then
+        insert into #variable with auto name
+        select '@id' as name,
+               @recordId as value;
+    end if;
+               
+    -- sp update
+    set @updateSp = (select top 1
+                            u.user_name + '.' + p.proc_name
+                       from sys.sysprocedure p join sys.sysuserperm u on p.creator = u.user_id
+                      where u.user_name =  left(@entity, locate(@entity,'.') -1)
+                        and locate(p.proc_name, substr(@entity, locate(@entity,'.') +1)+'_')=1
+                        and not exists(select *
+                                         from sys.sysprocparm
+                                        where proc_id = p.proc_id
+                                          and parm_mode_in = 'Y'
+                                          and [default] is null
+                                          and parm_name not in (select name from #variable)));
+                                          
+    if @updateSp is not null then
     
-    set @recordId = isnull(@recordId, @@identity);
+    
+        set @sql = 'call ' + @updateSp + '(' +
+                    (select list(name + '=''' + value +'''')
+                       from #variable
+                      where ar.isColumn(@updateSp, name, 1) = 1)
+                    + ')';
+                    
+        message 'ar.put sp sql = ', @sql;
+        
+        execute immediate @sql;
+    
+    
+    else
+        set @sql = 'insert into [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) +'] '+
+                   ' on existing update with auto name '+
+                   ' select ' +
+                   (select list(''''+value+''' as [' + name + ']')
+                      from #variable
+                     where name <> 'url'
+                       and name not like '%:'
+                       and ar.isColumn(@entity, name) = 1) +
+                    + if (select count(*)
+                            from #variable
+                           where name <> 'url'
+                             and name not like '%:') <> 0  and not exists (select * from #variable where name = 'id') then ',' else '' endif
+                    + if not exists (select * from #variable where name = 'id') then
+                        if @recordId is null then ' null' else ' ''' + cast(@recordId as varchar(24)) + '''' end if + ' as id '
+                      else '' endif;
+                    
+        --message 'ar.put @sql = ', @sql;
+                    
+        execute immediate @sql;
+        
+        set @recordId = isnull(@recordId, @@identity);
+    end if;
     
     delete from #variable;
     
