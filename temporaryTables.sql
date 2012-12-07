@@ -1,3 +1,8 @@
+if exists (select * from sys.systable t join sys.sysuserperm p on t.creator = p.user_id where table_name = 'log' and user_name = 'ar') then
+    drop table ar.log
+end if
+;
+
 create global temporary table ar.log(
     
     url long varchar,
@@ -6,6 +11,7 @@ create global temporary table ar.log(
     requestor varchar(1024) default current user,
     code varchar(1024),
 
+    httpBody long varchar default http_body(),
     callerIP varchar(128) default connection_property('ClientNodeAddress'),
 
     id ID, xid GUID, ts TS, cts CTS,

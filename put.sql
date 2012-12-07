@@ -84,7 +84,8 @@ begin
                (select list(''''+value+''' as [' + name + ']')
                   from #variable
                  where name <> 'url'
-                   and name not like '%:') +
+                   and name not like '%:'
+                   and ar.isColumn(@entity, name) = 1) +
                 + if (select count(*)
                         from #variable
                        where name <> 'url'
@@ -97,6 +98,16 @@ begin
                 
     execute immediate @sql;
     
+    set @recordId = isnull(@recordId, @@identity);
+    
+    delete from #variable;
+    
+    insert into #variable with auto name
+    select 'id' as name,
+            @recordId as value;
+                
+    set @response = ar.getTable(@entity,@entityId,1,1);
+
     return @response;
     
 end

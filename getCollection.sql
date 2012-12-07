@@ -34,11 +34,14 @@ begin
     
     -- collection
     for lloop2 as ccur2 cursor for
-    select child as c_child
-      from ar.collectionLink
-     where parent = @collection
+    select l.child as c_child,
+           l.childXid as c_childXid,
+           c.name as c_name
+      from ar.collectionLink l join ar.collection c on l.child = c.id
+     where l.parent = @collection
     do
-        set @result = xmlconcat(@result, ar.getCollection(c_child, @pageSize, @pageNumber));
+        --set @result = xmlconcat(@result, ar.getCollection(c_child, @pageSize, @pageNumber));
+        set @result = xmlconcat(@result, xmlelement('collection', xmlattributes(c_name as "parent", c_childXid as "parent-xid")));
     end for;
     
     set @result = xmlelement('collection', xmlattributes(@name as "name", @xid as "xid"), @result);

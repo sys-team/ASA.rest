@@ -23,6 +23,11 @@ begin
     set @code = replace(http_header('Authorization'), 'Bearer ', '');
     --message 'ar.rest code = ', @code;
     
+     insert into ar.log with auto name
+     select @xid as xid,
+            @url as url,
+            @code as code;  
+    
     select action,
            entity
       into @action, @entity
@@ -38,12 +43,9 @@ begin
            value
       from util.httpVariables();
       
-    insert into ar.log with auto name
-    select @xid as xid,
-           @url as url,
-           list(name +'='+value, '&') as variables,
-           @code as code
-      from #variable;
+    update ar.log 
+      set variables = (select list(name +'='+value, '&') from #variable)
+     where xid = @xid;
       
     -- entity id & entity type       
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
@@ -110,6 +112,11 @@ begin
         
             set @error = errormsg();
             set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns", now() as "ts"), xmlelement('error', @error));
+            
+            update ar.log
+               set response = @response
+            where xid = @xid;
+            
             return @response;
             
 end
