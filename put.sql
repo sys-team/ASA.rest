@@ -129,7 +129,7 @@ begin
                         if @recordId is null then ' null' else ' ''' + cast(@recordId as varchar(24)) + '''' end if + ' as id '
                       else '' endif;
                     
-        --message 'ar.put @sql = ', @sql;
+        message 'ar.put @sql = ', @sql;
                     
         execute immediate @sql;
         
