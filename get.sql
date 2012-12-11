@@ -112,7 +112,8 @@ begin
                        and name <> 'url'
                        and name not like '%:')
                    else '' endif +
-                   ' order by '+ @orderBy + ' desc for xml raw, elements';
+                   if ar.isColumn( @entity,'id') = 1 then 'order by '+ @orderBy + ' desc' else '' endif  +
+                   'for xml raw, elements';
                    
         --message 'ar.rest @sql for @rawData = ', @sql;
         set @sql = 'set @rawData = (' + @sql +')';
