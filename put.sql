@@ -113,7 +113,7 @@ begin
                                           
     if @updateSpName is not null then
     
-        message 'ar.put @updateSpId = ', @updateSpId,' @updateSpHAsResultSet = ', @updateSpHasResultSet;
+        --message 'ar.put @updateSpId = ', @updateSpId,' @updateSpHAsResultSet = ', @updateSpHasResultSet;
     
         -- has result set
         if @updateSpHasResultSet = 0 then
@@ -123,14 +123,14 @@ begin
                           where ar.isColumn(@updateSpOwner +'.' + @updateSpName, name, 1) = 1)
                         + ')';
                         
-            message 'ar.put sp sql = ', @sql;
+            --message 'ar.put sp sql = ', @sql;
             
             set @sql = 'begin '+ @sql+' end';
             
             execute immediate with result set on @sql;
         else
         
-            message 'ar.put sp with result set'; 
+            --message 'ar.put sp with result set'; 
         
             set @response = ar.getSp(@updateSpOwner +'.' + @updateSpName, @updateSpId, @pageSize, @pageNumber, @orderBy);   
             
