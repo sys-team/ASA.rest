@@ -13,8 +13,6 @@ begin
     declare @id long varchar;
     declare @recordId bigint;
     declare @recordXid uniqueidentifier;
-    declare @sql long varchar;
-    declare @rawData xml;
     
     declare local temporary table #fk(entityName long varchar,
                                   primaryColumn long varchar,
@@ -72,12 +70,7 @@ begin
                             from #fk
                            group by entityName
                           having count(distinct primaryColumn) <>1);
-    
-    -- sql
-    set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
-               ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-               ' * ';
-    
+        
     -- message 'ar.get @entityType = ', @entityType;
     if @entityType = 'table' then
                        
@@ -89,67 +82,9 @@ begin
     
     elseif @entityType = 'sp' then
     
-        --set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy);
-    
-        set @sql = @sql +
-                   'from [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + ']' +
-                   ' (' +
-                   (select list('['+  name +']='''+value+'''')
-                      from #variable
-                     where name in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId)
-                       and name <> 'url'
-                       and name not like '%:') +
-                   ') ' +
-                   if (select count(*)
-                         from #variable
-                        where name not in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId)
-                          and name <> 'url'
-                          and name not like '%:') <> 0
-                   then ' where ' +
-                   (select list('[' + name +']='''+value+'''', ' and ')
-                      from #variable
-                     where name not in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId)
-                       and name <> 'url'
-                       and name not like '%:')
-                   else '' endif +
-                   if ar.isColumn( @entity,'id') = 1 then 'order by '+ @orderBy + ' desc' else '' endif  +
-                   'for xml raw, elements';
-                   
-        --message 'ar.rest @sql for @rawData = ', @sql;
-        set @sql = 'set @rawData = (' + @sql +')';
-        
-        execute immediate @sql;
-        
-        
-        set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
-                        ', xid as "xid"' +' ),' +
-                        '(select xmlagg(xmlelement(' +
-                        'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
-                        'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , value)) ' +
-                        'from openxml(r ,''/row/*'') '+
-                        'with ( name long varchar ''@mp:localname'', value long varchar ''.'') as r ' +
-                        ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
-                        ' list(primaryColumn order by entityName) as parentColumns ' +
-                        ' from #fk group by foreignColumn) as f '+
-                        ' on r.name = f.foreignColumn ' +
-                        ' outer apply (select xid from ar.xidById(r.[name],r.[value]))' +
-                        ' as lat' +
-                        ' where r.name not in (''xid'') '+
-                        ')' + 
-                        ')) from ' +
-                '(select r, id, xid '+
-                ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
-                ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
-        
-        --message 'ar.rest @sql = ', @sql;
-        set @sql = 'set @response = (' + @sql +')';
-        
-        execute immediate @sql;
-    
+        set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy);   
 
     end if;
-    
-
     
     return @response;
 

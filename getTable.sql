@@ -4,13 +4,16 @@ create or replace function ar.getTable(
     @pageSize integer,
     @pageNumber integer,
     @orderBy long varchar default 'id',
-    @collection integer default null
+    @collection integer default null,
+    @restriction long varchar default null
 )
 returns xml
 begin
     declare @result xml;
     declare @rawData xml;
     declare @sql long varchar;
+    declare @where long varchar;
+
     
     declare local temporary table #fk(entityName long varchar,
                                       primaryColumn long varchar,
@@ -36,18 +39,26 @@ begin
            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
            ' * ';
            
+    if @collection is not null then
+        set @where = @where +' xid in ('+ isnull((select nullif(list('''' + uuidtostr(elementXid) + ''''),'')
+                                                    from ar.element
+                                                    where collection = @collection
+                                                      and tableName = @entityName),'null') + ') ';
+    end if;
+    
+    if (select count(*) from #variable where name <> 'url' and name not like '%:') <> 0  then
+        set @where = @where  +  if @where is not null then ' and ' else '' endif +
+                     (select list('[' + name +']='''+value+'''', ' and ') from #variable where name <> 'url' and name not like '%:');
+    end if;
+    
+    if @restriction is not null then
+        set @where = @where  +  if @where is not null then ' and ' else '' endif +
+                     ' id in (' + @restriction + ')';
+    end if;
+    
     set @sql = @sql +
            'from [' + left(@entityName, locate(@entityName,'.') -1) + '].[' + substr(@entityName, locate(@entityName,'.') +1) + ']' +
-           if @collection is not null then
-                'where xid in ('+ isnull((select nullif(list('''' + uuidtostr(elementXid) + ''''),'')
-                                            from ar.element
-                                           where collection = @collection
-                                             and tableName = @entityName),'null') + ') '
-           else
-                if (select count(*) from #variable where name <> 'url' and name not like '%:') <> 0
-                then ' where ' +  (select list('[' + name +']='''+value+'''', ' and ') from #variable where name <> 'url' and name not like '%:')
-                else '' endif
-           endif +
+            if length(@where) <> 0 then ' where ' + @where else '' endif +
            ' order by '+ @orderBy + ' desc for xml raw, elements';
            
     --message 'ag.getTable @sql = ', @sql;

@@ -78,7 +78,7 @@ begin
            
     -- Authorization
     if @authorized = 0 then
-        set @response = xmlelement('response', xmlelement('error','Not autorized'));
+        set @response = xmlelement('response', xmlelement('error', xmlelement('NotAuthorized' as "code"), 'Not authorized'));
     else
         case @action
             when 'get' then
@@ -116,7 +116,7 @@ begin
                 set @errorCode =  trim(substring(@error, locate(@error,'RAISERROR executed: ') + length('RAISERROR executed: ')));
             end if;
 
-                    
+            rollback;       
             
             set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns",now() as "ts"),
                                                    xmlelement('error', xmlattributes(@errorCode as "code"), @error));

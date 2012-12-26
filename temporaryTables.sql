@@ -19,3 +19,4 @@ create global temporary table ar.log(
     
 )  not transactional share by all
 ;
+

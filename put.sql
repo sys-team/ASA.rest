@@ -1,5 +1,8 @@
 create or replace function ar.put(
-    @url long varchar
+    @url long varchar,
+    @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
+    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
+    @orderBy long varchar default isnull(http_variable('order-by:'),'id')
 )
 returns xml
 begin
@@ -13,7 +16,10 @@ begin
     declare @varName long varchar;
     declare @varValue long varchar;
     declare @fkId integer;
-    declare @updateSp long varchar;
+    declare @updateSpName long varchar;
+    declare @updateSpOwner long varchar;
+    declare @updateSpId integer;
+    declare @updateSpHasResultSet integer;
     
     declare local temporary table #fk(entityName long varchar,
                                       primaryColumn long varchar,
@@ -86,31 +92,49 @@ begin
     end if;
                
     -- sp update
-    set @updateSp = (select top 1
-                            u.user_name + '.' + p.proc_name
-                       from sys.sysprocedure p join sys.sysuserperm u on p.creator = u.user_id
-                      where u.user_name =  left(@entity, locate(@entity,'.') -1)
-                        and locate(p.proc_name, substr(@entity, locate(@entity,'.') +1)+'_')=1
-                        and not exists(select *
-                                         from sys.sysprocparm
-                                        where proc_id = p.proc_id
-                                          and parm_mode_in = 'Y'
-                                          and [default] is null
-                                          and parm_name not in (select name from #variable)));
+    select top 1
+           u.user_name,
+           p.proc_name,
+           p.proc_id,
+           (select count(*)
+              from sys.sysprocparm
+             where proc_id = p.proc_id
+               and parm_type = 1)
+      into @updateSpOwner, @updateSpName, @updateSpId, @updateSpHasResultSet
+      from sys.sysprocedure p join sys.sysuserperm u on p.creator = u.user_id
+     where u.user_name =  left(@entity, locate(@entity,'.') -1)
+       and locate(p.proc_name, substr(@entity, locate(@entity,'.') +1)+'_')=1
+       and not exists(select *
+                        from sys.sysprocparm
+                       where proc_id = p.proc_id
+                         and parm_mode_in = 'Y'
+                         and [default] is null
+                         and parm_name not in (select name from #variable));
                                           
-    if @updateSp is not null then
+    if @updateSpName is not null then
     
+        message 'ar.put @updateSpId = ', @updateSpId,' @updateSpHAsResultSet = ', @updateSpHasResultSet;
     
-        set @sql = 'call ' + @updateSp + '(' +
-                    (select list(name + '=''' + value +'''')
-                       from #variable
-                      where ar.isColumn(@updateSp, name, 1) = 1)
-                    + ')';
-                    
-        message 'ar.put sp sql = ', @sql;
+        -- has result set
+        if @updateSpHasResultSet = 0 then
+            set @sql = 'call ' + @updateSpOwner +'.' + @updateSpName + '(' +
+                        (select list(name + '=''' + value +'''')
+                           from #variable
+                          where ar.isColumn(@updateSpOwner +'.' + @updateSpName, name, 1) = 1)
+                        + ')';
+                        
+            message 'ar.put sp sql = ', @sql;
+            
+            set @sql = 'begin '+ @sql+' end';
+            
+            execute immediate with result set on @sql;
+        else
         
-        execute immediate @sql;
-    
+            message 'ar.put sp with result set'; 
+        
+            set @response = ar.getSp(@updateSpOwner +'.' + @updateSpName, @updateSpId, @pageSize, @pageNumber, @orderBy);   
+            
+        end if;
     
     else
         set @sql = 'insert into [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) +'] '+
@@ -129,7 +153,7 @@ begin
                         if @recordId is null then ' null' else ' ''' + cast(@recordId as varchar(24)) + '''' end if + ' as id '
                       else '' endif;
                     
-        message 'ar.put @sql = ', @sql;
+       --message 'ar.put @sql = ', @sql;
                     
         execute immediate @sql;
         
@@ -141,9 +165,11 @@ begin
     insert into #variable with auto name
     select 'id' as name,
             @recordId as value;
-                
-    set @response = ar.getTable(@entity,@entityId,1,1);
-
+            
+    if @updateSpHasResultSet = 0 then            
+        set @response = ar.getTable(@entity,@entityId,1,1);
+    end if;
+    
     return @response;
     
 end
