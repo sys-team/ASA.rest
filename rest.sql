@@ -78,7 +78,7 @@ begin
            
     -- Authorization
     if @authorized = 0 then
-        set @response = xmlelement('response', xmlelement('error', xmlelement('NotAuthorized' as "code"), 'Not authorized'));
+        set @response = xmlelement('response', xmlelement('error', xmlattributes('NotAuthorized' as "code"), 'Not authorized'));
     else
         case @action
             when 'get' then
