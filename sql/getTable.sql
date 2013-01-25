@@ -61,11 +61,13 @@ begin
             if length(@where) <> 0 then ' where ' + @where else '' endif +
            ' order by '+ @orderBy + ' desc for xml raw, elements';
            
-    --message 'ag.getTable @sql = ', @sql;
+    --message 'ar.getTable @sql = ', @sql;
            
     set @sql = 'set @rawData = (' + @sql +')';
     
     execute immediate @sql;
+    
+    --message 'ar.getTable @rawData = ', @rawData;
     
     set @result = ar.processRawData(@entityName, @entityId, 'table', @rawData);
     
