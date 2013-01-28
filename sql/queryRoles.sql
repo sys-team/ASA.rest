@@ -3,7 +3,7 @@ returns xml
 begin
     declare @result xml;
     
-    set @result = xmlelement('response', ea.roles(@code));
+    set @result = util.UOAuthAuthorize(@code);
     
     return @result;
 end;

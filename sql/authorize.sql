@@ -18,7 +18,7 @@ begin
     end if;
     
     
-    if @@servername = 'HQVSRV58' then return 1 endif;
+    if @@servername in ('HQVSRV58','UNCAT') then return 1 end if;
     
     if exists(select *
                 from openxml(@roles, '/*:response/*:roles/*:role')

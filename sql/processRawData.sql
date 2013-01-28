@@ -15,14 +15,15 @@ begin
                 ', xid as "xid"' +' ),' +
                 '(select xmlagg(xmlelement(' +
                 'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
-                'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , value)) ' +
+                'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
+                ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then value else value2 endif)) ' +
                 'from openxml(r ,''/row/*'') '+
-                'with ( name long varchar ''@mp:localname'', value xml ''./@mp:xmltext'') as r ' +
+                'with ( name long varchar ''@mp:localname'', value xml ''./@mp:xmltext'', value2 long varchar ''.'') as r ' +
                 ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
                 ' list(primaryColumn order by entityName) as parentColumns ' +
                 ' from #fk group by foreignColumn) as f '+
                 ' on r.name = f.foreignColumn ' +
-                ' outer apply (select xid from ar.xidById(r.[name],r.[value]))' +
+                ' outer apply (select xid from ar.xidById(r.[name],r.[value2]))' +
                 ' as lat' +
                 ' where r.name not in (''xid'') '+
                 ')' + 
