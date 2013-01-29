@@ -1,5 +1,7 @@
 create or replace function ar.rest(
-    @url long varchar
+    @url long varchar,
+    @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
+    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif
 )
 returns xml
 begin
@@ -13,6 +15,7 @@ begin
     declare @cts datetime;
     declare @xid uniqueidentifier;
     declare @varName long varchar;
+    declare @rowcount integer;
     
     declare local temporary table #variable(name long varchar,
                                             value long varchar);
@@ -94,10 +97,17 @@ begin
         end case;
     end if;
     
+    set @rowcount = (select count(*)
+                       from openxml(xmlelement('root',@response), '/root/row')
+                            with(name long varchar '@name'));
+    
     set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns",
                                                          @xid as "xid",
                                                          now() as "ts",
                                                          @cts as "cts",
+                                                         @pageSize as "page-size",
+                                                         @pageNumber as "page-number",
+                                                         @rowcount as "page-row-count",
                                                          @@servername as "servername",
                                                          db_name() as "dbname",
                                                          property('machinename') as "host"), @response);
