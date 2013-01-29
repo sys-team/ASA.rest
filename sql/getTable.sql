@@ -34,6 +34,11 @@ begin
                             from #fk
                            group by entityName
                           having count(distinct primaryColumn) <>1);
+                          
+    -- order by
+    if ar.isColumn(@entityName, @orderBy) = 0 then
+        set @orderBy = null;
+    end if;
     
     set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
@@ -58,8 +63,9 @@ begin
     
     set @sql = @sql +
            'from [' + left(@entityName, locate(@entityName,'.') -1) + '].[' + substr(@entityName, locate(@entityName,'.') +1) + ']' +
-            if length(@where) <> 0 then ' where ' + @where else '' endif +
-           ' order by '+ @orderBy + ' desc for xml raw, elements';
+           if length(@where) <> 0 then ' where ' + @where else '' endif +
+           if @orderBy is not null then ' order by '+ @orderBy + ' desc ' else '' endif +
+           ' for xml raw, elements';
            
     --message 'ar.getTable @sql = ', @sql;
            
