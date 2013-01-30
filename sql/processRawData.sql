@@ -11,12 +11,12 @@ begin
     
     --message 'ar.processRawData @rawData = ', @rawData;
     
-    set  @sql = 'select xmlagg(xmlelement(''row'', xmlattributes(''' + @entity + ''' as "name"' +
+    set  @sql = 'select xmlagg(xmlelement(''d'', xmlattributes(''' + @entity + ''' as "name"' +
                 ', xid as "xid"' +' ),' +
                 '(select xmlagg(xmlelement(' +
                 'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
                 'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
-                ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then value else value2 endif)) ' +
+                ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then value else util.xmlEscape(value2) endif)) ' +
                 'from openxml(r ,''/row/*'') '+
                 'with ( name long varchar ''@mp:localname'', value xml ''./@mp:xmltext'', value2 long varchar ''.'') as r ' +
                 ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
