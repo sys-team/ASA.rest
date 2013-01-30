@@ -2,7 +2,8 @@ create or replace function ar.get(
     @url long varchar,
     @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
     @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
-    @orderBy long varchar default isnull(http_variable('order-by:'),'id')
+    @orderBy long varchar default isnull(http_variable('order-by:'),'id'),
+    @columns long varchar default http_variable('columns:')
 )
 returns xml
 begin
@@ -74,7 +75,7 @@ begin
     -- message 'ar.get @entityType = ', @entityType;
     if @entityType = 'table' then
                        
-        set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy);
+        set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns);
         
     elseif @entityType = 'collection' then
     
@@ -82,7 +83,7 @@ begin
     
     elseif @entityType = 'sp' then
     
-        set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy);   
+        set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, @columns);   
 
     end if;
     

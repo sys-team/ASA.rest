@@ -4,7 +4,8 @@ create or replace function ar.getSp(
     @pageSize integer,
     @pageNumber integer,
     @orderBy long varchar default 'id',
-    @whereClause long varchar default null
+    @whereClause long varchar default null,
+    @columns long varchar default null
 )
 returns xml
 begin
@@ -14,7 +15,7 @@ begin
     
     set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
                ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-               ' * ';
+               ' ' + if @columns is not null then @columns else '*' endif + ' ';
     
     set @sql = @sql +
             'from [' + left(@entityName, locate(@entityName,'.') -1) + '].[' + substr(@entityName, locate(@entityName,'.') +1) + ']' +

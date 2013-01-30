@@ -5,7 +5,8 @@ create or replace function ar.getTable(
     @pageNumber integer,
     @orderBy long varchar default 'id',
     @collection integer default null,
-    @restriction long varchar default null
+    @restriction long varchar default null,
+    @columns long varchar default null
 )
 returns xml
 begin
@@ -42,7 +43,7 @@ begin
     
     set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-           ' * ';
+           ' ' + if @columns is not null then @columns else '*' endif + ' ';
            
     if @collection is not null then
         set @where = @where +' xid in ('+ isnull((select nullif(list('''' + uuidtostr(elementXid) + ''''),'')
