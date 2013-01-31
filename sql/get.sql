@@ -71,6 +71,11 @@ begin
                             from #fk
                            group by entityName
                           having count(distinct primaryColumn) <>1);
+                          
+    -- prepare @columns
+    if @columns is not null then
+        set @columns = '[' + replace(@columns, ',', '],[') + ']';
+    end if;
         
     -- message 'ar.get @entityType = ', @entityType;
     if @entityType = 'table' then
