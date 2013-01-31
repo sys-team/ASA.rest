@@ -17,9 +17,10 @@ returns rows from table or stored procedure result set
 
 * code - UOAuth access token
 * page-size: -  rows per page, default 10
-* page-number: - number of page from resulr set, default 1
+* page-number: - number of page from result set, default 1
 * order-by: - order by expression, default 'id', if table or sp result set does not have 'id' column, no order by
-* columns: - list of columns to select default '*'
+* columns: - list of columns to select, default '*'
+* order-dir: - order by direction, default is 'desc'
 
 ### returns:
 

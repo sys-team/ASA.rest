@@ -3,7 +3,8 @@ create or replace function ar.get(
     @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
     @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
     @orderBy long varchar default isnull(http_variable('order-by:'),'id'),
-    @columns long varchar default http_variable('columns:')
+    @columns long varchar default http_variable('columns:'),
+    @orderDir long varchar default http_variable('order-dir:')
 )
 returns xml
 begin
@@ -76,11 +77,16 @@ begin
     if @columns is not null then
         set @columns = '[' + replace(@columns, ',', '],[') + ']';
     end if;
+    
+    -- check @orderDir
+    if @orderDir not in ('asc', 'desc') then
+        set @orderDir = null;
+    end if;
         
     -- message 'ar.get @entityType = ', @entityType;
     if @entityType = 'table' then
                        
-        set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns);
+        set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns, @orderDir);
         
     elseif @entityType = 'collection' then
     
@@ -88,7 +94,7 @@ begin
     
     elseif @entityType = 'sp' then
     
-        set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, @columns);   
+        set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, @columns, @orderDir);   
 
     end if;
     

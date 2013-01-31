@@ -6,7 +6,8 @@ create or replace function ar.getTable(
     @orderBy long varchar default 'id',
     @collection integer default null,
     @restriction long varchar default null,
-    @columns long varchar default null
+    @columns long varchar default '*',
+    @orderDir long varchar default 'desc'
 )
 returns xml
 begin
@@ -41,9 +42,18 @@ begin
         set @orderBy = null;
     end if;
     
+    if @orderDir is null then
+        set @orderDir = 'desc';
+    end if;
+    
+    -- columns
+    if @columns is null then
+        set @columns = '*';
+    end if;
+    
     set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-           ' ' + if @columns is not null then @columns else '*' endif + ' ';
+           ' ' + @columns + ' ';
            
     if @collection is not null then
         set @where = @where +' xid in ('+ isnull((select nullif(list('''' + uuidtostr(elementXid) + ''''),'')
@@ -65,7 +75,7 @@ begin
     set @sql = @sql +
            'from [' + left(@entityName, locate(@entityName,'.') -1) + '].[' + substr(@entityName, locate(@entityName,'.') +1) + ']' +
            if length(@where) <> 0 then ' where ' + @where else '' endif +
-           if @orderBy is not null then ' order by '+ @orderBy + ' desc ' else '' endif +
+           if @orderBy is not null then ' order by '+ @orderBy + ' ' + @orderDir else '' endif +
            ' for xml raw, elements';
            
     --message 'ar.getTable @sql = ', @sql;
