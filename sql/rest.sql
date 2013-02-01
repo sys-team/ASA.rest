@@ -1,14 +1,14 @@
 create or replace function ar.rest(
     @url long varchar,
     @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
-    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif
+    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
+    @code long varchar default isnull(http_header('Authorization'),http_variable('authorization:') )
 )
 returns xml
 begin
     declare @response xml;
     declare @error long varchar;
     declare @errorCode long varchar;
-    declare @code long varchar;
     declare @entity long varchar;
     declare @action long varchar;
     declare @authorized integer;
@@ -18,14 +18,12 @@ begin
     declare @rowcount integer;
     
     declare local temporary table #variable(name long varchar,
-                                            value long varchar);
+                                            value long varchar,
+                                            operator varchar(64) default '=');
     
     set @cts = now();
     set @xid = newid();
- 
-    -- authorization   
-    set @code = replace(http_header('Authorization'), 'Bearer ', '');
-    --message 'ar.rest code = ', @code;
+
     
      insert into ar.log with auto name
      select @xid as xid,
@@ -98,7 +96,7 @@ begin
     end if;
     
     set @rowcount = (select count(*)
-                       from openxml(xmlelement('root',@response), '/root/row')
+                       from openxml(xmlelement('root',@response), '/root/d')
                             with(name long varchar '@name'));
     
     set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns",

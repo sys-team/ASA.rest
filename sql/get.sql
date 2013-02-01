@@ -15,6 +15,7 @@ begin
     declare @id long varchar;
     declare @recordId bigint;
     declare @recordXid uniqueidentifier;
+    declare @tmp long varchar;
     
     declare local temporary table #fk(entityName long varchar,
                                   primaryColumn long varchar,
@@ -30,7 +31,7 @@ begin
            option(delimited by '/') as t;
     
     if @entity is null then
-        set @response = xmlelement('response', xmlelement('error','Entity requered'));
+        set @response = xmlelement('response', xmlelement('error','Entity required'));
         return @response;
     end if;   
            
@@ -82,6 +83,15 @@ begin
     if @orderDir not in ('asc', 'desc') then
         set @orderDir = null;
     end if;
+    
+    set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
+    message 'ar.get variables = ', @tmp;
+    
+    -- parse variables
+    call ar.parseVariables();
+    
+    set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
+    message 'ar.get parsed variables = ', @tmp;
         
     -- message 'ar.get @entityType = ', @entityType;
     if @entityType = 'table' then

@@ -64,7 +64,7 @@ begin
     
     if (select count(*) from #variable where name <> 'url' and name not like '%:') <> 0  then
         set @where = @where  +  if @where is not null then ' and ' else '' endif +
-                     (select list('[' + name +']='''+value+'''', ' and ') from #variable where name <> 'url' and name not like '%:');
+                     (select list('[' + name +']' + operator + ''''+value+'''', ' and ') from #variable where name <> 'url' and name not like '%:');
     end if;
     
     if @restriction is not null then
