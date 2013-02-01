@@ -47,7 +47,7 @@ begin
                    and name <> 'url'
                    and name not like '%:') <> 0
             then ' where ' +
-            (select list('[' + name +']='''+value+'''', ' and ')
+            (select list('[' + name +'] ' + operator + ' ' + value, ' and ')
                from #variable
               where name not in (select parm_name from sys.sysprocparm where parm_mode_in = 'Y' and proc_id = @entityId)
                 and name <> 'url'
