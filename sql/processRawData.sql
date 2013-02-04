@@ -23,7 +23,7 @@ begin
                 ' list(primaryColumn order by entityName) as parentColumns ' +
                 ' from #fk group by foreignColumn) as f '+
                 ' on r.name = f.foreignColumn ' +
-                ' outer apply (select xid from ar.xidById(r.[name],r.[value2]))' +
+                ' outer apply (select xid from ar.xidById(r.[name],r.[value2],parentColumns))' +
                 ' as lat' +
                 ' where r.name not in (''xid'') '+
                 ')' + 

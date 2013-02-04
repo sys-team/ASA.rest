@@ -26,9 +26,9 @@ begin
            primaryColumn,
            foreignColumn
       from ar.fkList(@entityId)
-     where primaryColumn = 'id'
+     where /*primaryColumn = 'id'
        and ar.isColumn(entityName, 'id') = 1
-       and ar.isColumn(entityName, 'xid') = 1;
+       and */ar.isColumn(entityName, 'xid') = 1;
        
     -- sordgoods!!
     delete from #fk

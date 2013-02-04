@@ -1,4 +1,8 @@
-create or replace procedure ar.xidById(@fkColumn long varchar, @id long varchar)
+create or replace procedure ar.xidById(
+    @fkColumn long varchar,
+    @id long varchar,
+    @idName long varchar default 'id'
+)
 begin
     declare @result uniqueidentifier;
     declare @sql long varchar;
@@ -13,10 +17,10 @@ begin
     
     set @sql = 'set @result = (select xid from [' + 
                 left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + ']' +
-                ' where id = ''' + @id +''')';
+                ' where [' + @idName +'] = ''' + @id +''')';
+                
     execute immediate @sql;
     
     select @result as xid;
-    
 end
 ;
