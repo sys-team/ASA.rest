@@ -22,5 +22,9 @@ begin
     execute immediate @sql;
     
     select @result as xid;
+    
+    exception
+        when others then
+            return null;
 end
 ;

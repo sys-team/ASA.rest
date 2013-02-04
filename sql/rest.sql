@@ -10,6 +10,7 @@ begin
     declare @error long varchar;
     declare @errorCode long varchar;
     declare @entity long varchar;
+    declare @parentEntity long varchar;
     declare @action long varchar;
     declare @authorized integer;
     declare @cts datetime;
@@ -31,10 +32,11 @@ begin
             @code as code;  
     
     select action,
-           entity
-      into @action, @entity
+           entity,
+           parentEntity
+      into @action, @entity, @parentEntity
       from openstring(value @url)
-           with (action long varchar, entity long varchar, id long varchar)
+           with (action long varchar, entity long varchar, id long varchar, parentEntity long varchar)
            option(delimited by '/') as t;
            
     set @authorized = ar.authorize(@code, @entity);
