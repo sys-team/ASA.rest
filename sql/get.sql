@@ -11,11 +11,13 @@ begin
     declare @response xml;
     declare @error long varchar;
     declare @entity long varchar;
+    declare @parentEntity long varchar;
     declare @code long varchar;
     declare @id long varchar;
     declare @recordId bigint;
     declare @recordXid uniqueidentifier;
     declare @tmp long varchar;
+    declare @sql long varchar;
     
     declare local temporary table #fk(entityName long varchar,
                                   primaryColumn long varchar,
@@ -24,10 +26,11 @@ begin
     
     -- url elements
     select entity,
-           id
-      into @entity, @id
+           id,
+           parentEntity
+      into @entity, @id, @parentEntity
       from openstring(value @url)
-           with (serv long varchar, entity long varchar, id long varchar)
+           with (serv long varchar, entity long varchar, id long varchar, parentEntity long varchar)
            option(delimited by '/') as t;
     
     if @entity is null then
@@ -62,12 +65,48 @@ begin
     select entityName,
            primaryColumn,
            foreignColumn
-      from ar.fkList(@entityId)
-     where primaryColumn = 'id'
+      from ar.fkList(@entityId);
+     /*where primaryColumn = 'id'
        and ar.isColumn(entityName, 'id') = 1
-       and ar.isColumn(entityName, 'xid') = 1;
+       and ar.isColumn(entityName, 'xid') = 1;*/
        
-    -- sordgoods!!
+    -- process parentEntity
+    if @parentEntity is not null then
+    
+        set @sql = (select
+                   'select min(p.[' + primaryColumn + '])' +
+                   ' from ' + entityName +' as p join ' +
+                   ' [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + '] as c '+
+                   ' on p.'+primaryColumn + ' = c.[' + foreignColumn + ']' +
+                   ' where (c.id = ''' + cast(@recordId as varchar(24)) + '''' +
+                   ' or c.xid  = util.strtoxid(''' + @recordXid + '''))'
+                     from #fk
+                    where entityName = @parentEntity);
+                    
+        --message 'ar.get parentEntity @sql = ' , @sql;
+        
+        set @sql = 'set @recordId = (' + @sql + ')';
+        
+        execute immediate @sql;
+    
+        set @recordXid = null;
+        set @entity = @parentEntity;
+        
+        delete from #variable
+         where name in('id','xid');
+         
+        insert into #variable with auto name
+        select 'id' as name,
+               @recordId as value;
+               
+        select entityId,
+               entityType
+          into @entityId, @entityType
+          from ar.entityIdAndType(@entity);
+    
+    end if;
+       
+    -- sordgoods!! 
     delete from #fk
      where entityName in (select entityName
                             from #fk

@@ -81,7 +81,7 @@ begin
            if @orderBy is not null then ' order by '+ @orderBy + ' ' + @orderDir else '' endif +
            ' for xml raw, elements';
            
-    --message 'ar.getTable @sql = ', @sql;
+    -- message 'ar.getTable @sql = ', @sql;
            
     set @sql = 'set @rawData = (' + @sql +')';
     

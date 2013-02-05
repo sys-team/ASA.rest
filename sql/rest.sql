@@ -10,7 +10,6 @@ begin
     declare @error long varchar;
     declare @errorCode long varchar;
     declare @entity long varchar;
-    declare @parentEntity long varchar;
     declare @action long varchar;
     declare @authorized integer;
     declare @cts datetime;
@@ -32,9 +31,8 @@ begin
             @code as code;  
     
     select action,
-           entity,
-           parentEntity
-      into @action, @entity, @parentEntity
+           entity
+      into @action, @entity
       from openstring(value @url)
            with (action long varchar, entity long varchar, id long varchar, parentEntity long varchar)
            option(delimited by '/') as t;
@@ -55,29 +53,10 @@ begin
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
     if varexists('@entityType') = 0 then create variable @entityType varchar(128) end if;
     
-    set @entityId = (select id
-                       from ar.collection
-                      where name = @entity);
-                      
-    if @entityId is not null then
-        set @entityType = 'collection';
-    else
-        set @entityId = (select sp.proc_id
-                           from sys.sysprocedure sp join sys.sysuserperm su on sp.creator = su.user_id
-                          where sp.proc_name =  substr(@entity, locate(@entity,'.') +1)
-                            and su.user_name =  left(@entity, locate(@entity,'.') -1));
-                            
-        if @entityId is not null then      
-            set @entityType = 'sp';
-        else
-            set @entityType = 'table';
-            
-            set @entityId = (select st.table_id
-                              from sys.systable st join sys.sysuserperm su on st.creator = su.user_id
-                             where st.table_name =  substr(@entity, locate(@entity,'.') +1)
-                               and su.user_name =  left(@entity, locate(@entity,'.') -1));
-        end if;
-    end if;
+    select entityId,
+           entityType
+      into @entityId, @entityType
+      from ar.entityIdAndType(@entity);
            
     -- Authorization
     if @authorized = 0 then
