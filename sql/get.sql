@@ -71,7 +71,7 @@ begin
        and ar.isColumn(entityName, 'xid') = 1;*/
        
     -- process parentEntity
-    if @parentEntity is not null then
+    if @parentEntity is not null and (@recordId is not null or @recordXid is not null) then
     
         set @sql = (select
                    'select min(p.[' + primaryColumn + '])' +
@@ -103,6 +103,10 @@ begin
                entityType
           into @entityId, @entityType
           from ar.entityIdAndType(@entity);
+          
+    elseif @parentEntity is not null and @recordId is null and @recordXid is null then
+    
+        set @entityType = 'query';
     
     end if;
        
@@ -123,29 +127,30 @@ begin
         set @orderDir = null;
     end if;
     
-    set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
-    message 'ar.get variables = ', @tmp;
+    --set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
+    --message 'ar.get variables = ', @tmp;
     
     -- parse variables
     call ar.parseVariables();
     
-    set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
-    message 'ar.get parsed variables = ', @tmp;
+    --set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
+    --message 'ar.get parsed variables = ', @tmp;
         
     -- message 'ar.get @entityType = ', @entityType;
-    if @entityType = 'table' then
-                       
-        set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns, @orderDir);
+    case @entityType 
+        when'table' then          
+            set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns, @orderDir);
         
-    elseif @entityType = 'collection' then
+        when 'collection' then  
+            set @response = ar.getCollection(@entityId, @pageSize, @pageNumber);
     
-        set @response = ar.getCollection(@entityId, @pageSize, @pageNumber);
-    
-    elseif @entityType = 'sp' then
-    
-        set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, @columns, @orderDir);   
-
-    end if;
+        when 'sp' then
+            set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, @columns, @orderDir);
+            
+        when 'query' then
+            set @response = ar.getQuery(@url);
+            
+    end case;
     
     return @response;
 

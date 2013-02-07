@@ -51,6 +51,8 @@ begin
         set @columns = '*';
     end if;
     
+    set @columns = ar.parseColumns(@entityId, @columns);
+    
     set @sql = 'select top ' + cast(@pageSize as varchar(64)) + ' ' +
            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
            ' ' + @columns + ' ';
@@ -81,7 +83,7 @@ begin
            if @orderBy is not null then ' order by '+ @orderBy + ' ' + @orderDir else '' endif +
            ' for xml raw, elements';
            
-    -- message 'ar.getTable @sql = ', @sql;
+    --message 'ar.getTable @sql = ', @sql;
            
     set @sql = 'set @rawData = (' + @sql +')';
     

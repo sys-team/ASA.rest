@@ -9,7 +9,7 @@ begin
     declare @result xml;
     declare @sql long varchar;
     
-    --message 'ar.processRawData @rawData = ', @rawData;
+    -- message 'ar.processRawData @rawData = ', @rawData;
     
     set  @sql = 'select xmlagg(xmlelement(''d'', xmlattributes(''' + @entity + ''' as "name"' +
                 ', xid as "xid"' +' ),' +
@@ -32,7 +32,7 @@ begin
         ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
         ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
     
-    --message 'ar.processRawData @sql = ', @sql;
+    -- message 'ar.processRawData @sql = ', @sql;
     set @sql = 'set @result = (' + @sql +')';
     
     execute immediate @sql;
