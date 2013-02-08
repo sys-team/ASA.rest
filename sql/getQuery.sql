@@ -74,7 +74,7 @@ begin
        set entityId = l.entityId,
            parsedName = ar.parseEntity(name),
            alias = 'tab' + cast(id as varchar(24))
-      from #entity outer apply (select entityId from ar.entityIdAndType(name)) as l;
+      from #entity outer apply (select entityId from ar.entityIdAndType(name,'table')) as l;
       
     update #entity
        set predicate = 'id=' + predicate
