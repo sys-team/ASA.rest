@@ -1,4 +1,8 @@
-create or replace  function ar.parseColumns(@entityId integer, @columns long varchar)
+create or replace  function ar.parseColumns(
+    @entityId integer,
+    @columns long varchar,
+    @alias long varchar default null
+)
 returns long varchar
 begin
     declare @result long varchar;
@@ -27,7 +31,7 @@ begin
             set @result = @result + '(select d from openxml(' +
                                     c_column_name + ', ''/*'') with(d xml ''@mp:xmltext''))' + ' as '+ c_column_name;
         else
-            set @result = @result + c_column_name;
+            set @result = @result + if @alias is not null then @alias + '.' else '' endif + '[' + c_column_name + ']';
         end if;
     end for;
     
