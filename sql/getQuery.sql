@@ -88,8 +88,35 @@ begin
      
     update #entity
        set predicate = '[' + replace(predicate,'=',']=''') + ''''
-     where isnull(predicate,'') <> '';
+     where isnull(predicate,'') <> ''
+       and predicate not like '%<%'
+       and predicate not like '%>%';
+     
+    update #entity
+       set predicate = '[' + replace(predicate,'<=',']<=''') + ''''
+     where isnull(predicate,'') <> ''
+       and predicate like '%<=%';
+       
+    update #entity
+       set predicate = '[' + replace(predicate,'>=',']<=''') + ''''
+     where isnull(predicate,'') <> ''
+       and predicate like '%>=%';
+       
+    update #entity
+       set predicate = '[' + replace(predicate,'<',']<''') + ''''
+     where isnull(predicate,'') <> ''
+       and predicate like '%<%'
+       and predicate not like '%<=%';
+       
+    update #entity
+       set predicate = '[' + replace(predicate,'>',']>''') + ''''
+     where isnull(predicate,'') <> ''
+       and predicate like '%>%'
+       and predicate not like '%>=%';
       
+    update #entity
+       set predicate = csconvert(predicate, 'char_charset', 'utf-8');
+       
     --set @result = (select * from #entity for xml raw, elements);
     --return @result;
     delete from #variable
@@ -196,7 +223,9 @@ begin
                      
     set @where2 = (select list(alias + '.' +predicate, ' and ')
                      from #entity
-                    where predicate like '%=%');
+                    where predicate like '%=%'
+                       or predicate like '%<%'
+                       or predicate like '%>%');
 
     set @sql = @sql + 'from ' + @from
                + if @where <> '' or @where2 <> '' then ' where ' + @where else '' endif +
@@ -204,7 +233,7 @@ begin
                if @orderBy is not null then ' order by ' + @entityAlias + '.' + @orderBy + ' ' + @orderDir else '' endif +
                ' for xml raw, elements';
     
-    message 'ar.getQuery @sql = ', @sql;
+    --message 'ar.getQuery @sql = ', @sql;
     
     set @sql = 'set @rawData = (' + @sql +')';
     
