@@ -57,8 +57,11 @@ begin
         end if;        
     end if;
     
+    --message 'ar.get @entityId = ', @entityId;
+    
     if @entityId is null then
         raiserror 55555 'Entity %1! not found', @entity;
+        return;
     end if;
     
     insert into #fk with auto name
@@ -71,40 +74,7 @@ begin
        and ar.isColumn(entityName, 'xid') = 1;*/
        
     -- process parentEntity
-    if @parentEntity is not null and (@recordId is not null or @recordXid is not null) then
-    
-        set @sql = (select
-                   'select min(p.[' + primaryColumn + '])' +
-                   ' from ' + entityName +' as p join ' +
-                   ' [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) + '] as c '+
-                   ' on p.'+primaryColumn + ' = c.[' + foreignColumn + ']' +
-                   ' where (c.id = ''' + cast(@recordId as varchar(24)) + '''' +
-                   ' or c.xid  = util.strtoxid(''' + @recordXid + '''))'
-                     from #fk
-                    where entityName = @parentEntity);
-                    
-        --message 'ar.get parentEntity @sql = ' , @sql;
-        
-        set @sql = 'set @recordId = (' + @sql + ')';
-        
-        execute immediate @sql;
-    
-        set @recordXid = null;
-        set @entity = @parentEntity;
-        
-        delete from #variable
-         where name in('id','xid');
-         
-        insert into #variable with auto name
-        select 'id' as name,
-               @recordId as value;
-               
-        select entityId,
-               entityType
-          into @entityId, @entityType
-          from ar.entityIdAndType(@entity);
-          
-    elseif @parentEntity is not null and @recordId is null and @recordXid is null then
+    if @parentEntity is not null  then
     
         set @entityType = 'query';
     
@@ -136,7 +106,7 @@ begin
     --set @tmp = (select list(name + ' '+ value + ' ' + operator) from #variable);
     --message 'ar.get parsed variables = ', @tmp;
         
-    -- message 'ar.get @entityType = ', @entityType;
+    --message 'ar.get @entityType = ', @entityType;
     case @entityType 
         when'table' then          
             set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns, @orderDir);
