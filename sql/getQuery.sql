@@ -98,7 +98,7 @@ begin
        and predicate like '%<=%';
        
     update #entity
-       set predicate = '[' + replace(predicate,'>=',']<=''') + ''''
+       set predicate = '[' + replace(predicate,'>=',']>=''') + ''''
      where isnull(predicate,'') <> ''
        and predicate like '%>=%';
        
