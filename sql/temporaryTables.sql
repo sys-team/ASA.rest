@@ -13,6 +13,7 @@ create global temporary table ar.log(
 
     httpBody long varchar default http_body(),
     callerIP varchar(128) default connection_property('ClientNodeAddress'),
+    sqlText long varchar,
 
     id ID, xid GUID, ts TS, cts CTS,
     unique (xid), primary key (id)

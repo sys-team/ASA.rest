@@ -13,14 +13,16 @@ begin
     declare @action long varchar;
     declare @authorized integer;
     declare @cts datetime;
-    declare @xid uniqueidentifier;
     declare @varName long varchar;
     declare @rowcount integer;
     
     declare local temporary table #variable(name long varchar,
                                             value long varchar,
                                             operator varchar(64) default '=');
-    
+     
+                                  
+    if varexists('@xid') = 0 then create variable @xid GUID end if;
+
     set @cts = now();
     set @xid = newid();
 
@@ -28,7 +30,9 @@ begin
      insert into ar.log with auto name
      select @xid as xid,
             @url as url,
-            @code as code;  
+            @code as code;
+            
+    message 'ar.rest start';
     
     select action,
            entity
@@ -52,6 +56,7 @@ begin
     -- entity id & entity type       
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
     if varexists('@entityType') = 0 then create variable @entityType varchar(128) end if;
+    
     
     select entityId,
            entityType

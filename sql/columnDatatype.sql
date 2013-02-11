@@ -24,6 +24,10 @@ begin
     
     set @result = util.dataTypeName(@result);
     
+    if @result is null then
+        set @result = 'expression';
+    end if;
+    
     return @result;
     
 end

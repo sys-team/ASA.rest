@@ -235,6 +235,10 @@ begin
     
     --message 'ar.getQuery @sql = ', @sql;
     
+    update ar.log
+       set sqlText = @sql
+     where xid = @xid;
+    
     set @sql = 'set @rawData = (' + @sql +')';
     
     execute immediate @sql; 
