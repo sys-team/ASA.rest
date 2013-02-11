@@ -19,7 +19,9 @@ begin
                                             from openstring(value @columns)
                                                  with(name long varchar)
                                                  option(delimited by '@' row delimited by ',') as c
-                                           where name not like '%(%)') as t on column_name = t.name
+                                           where name not like '%(%)'
+                                           union distinct
+                                           select 'xid') as t on column_name = t.name
      where table_id = @entityId
        and (@columns ='*'
         or name is not null)

@@ -16,11 +16,12 @@ begin
     declare @varName long varchar;
     declare @rowcount integer;
     
-    declare local temporary table #variable(name long varchar,
-                                            value long varchar,
-                                            operator varchar(64) default '=');
-     
-                                  
+    declare local temporary table #variable(
+        name long varchar,
+        value long varchar,
+        operator varchar(64) default '='
+    );
+                                 
     if varexists('@xid') = 0 then create variable @xid GUID end if;
 
     set @cts = now();
