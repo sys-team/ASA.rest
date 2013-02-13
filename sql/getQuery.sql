@@ -132,7 +132,11 @@ begin
       from #entity
       order by id
     do
-        if @prevEntityId is not null then
+    
+        if c_id = 1 then
+            set @from = c_parsedName + ' as ' + c_alias;
+        else
+        
             delete from #fk;
             delete from #fk1;
             
@@ -147,25 +151,23 @@ begin
                    primaryColumn,
                    foreignColumn
               from ar.fkList(@prevEntityId);
-            
-            set @from = @from + ' ' +
+        
+            set @from  = @from + 
                         coalesce((select top 1
-                                         if c_id = 2 then @prevParsedName + ' as ' + @prevAlias else '' endif +
                                          ' join ' +
                                          c_parsedName + ' as ' + c_alias + ' on ' +
                                          @prevAlias + '.' + primaryColumn + '=' + c_alias + '.' + foreignColumn
                                     from #fk 
                                    where entityName = @prevName),
                                  (select top 1
-                                         if c_id = 2 then @prevParsedName + ' as ' + @prevAlias else '' endif +
                                          ' join ' +
                                          c_parsedName + ' as ' + c_alias + ' on ' +
                                          @prevAlias + '.' + foreignColumn + '=' + c_alias + '.' + primaryColumn
                                     from #fk1
                                    where entityName = c_name),
-                                  if c_id = 2 then @prevParsedName + ' as ' + @prevAlias else '' endif + 
                                   ', ' + c_parsedName +' as ' + c_alias);
 
+        
         end if;
         
         set @prevEntityId = c_entityId;

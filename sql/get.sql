@@ -109,7 +109,7 @@ begin
     --message 'ar.get @entityType = ', @entityType;
     case @entityType 
         when'table' then          
-            set @response = ar.getTable(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, null, @columns, @orderDir);
+            set @response = ar.getQuery(@url);
         
         when 'collection' then  
             set @response = ar.getCollection(@entityId, @pageSize, @pageNumber);
