@@ -13,10 +13,17 @@ begin
     
     set  @sql = 'select xmlagg(xmlelement(''d'', xmlattributes(''' + @entity + ''' as "name"' +
                 ', xid as "xid"' +' ),' +
-                '(select xmlagg(xmlelement(' +
-                'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
-                'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
-                ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then value else util.xmlEscape(value2) endif)) ' +
+                '(select xmlagg(' +
+                'if name = ''___extras'' then ' +
+                    ' (select xmlagg(extra) from openxml(value,''/*/extra'') with(extra xml ''@mp:xmltext'')) '+ 
+                'else ' +
+                    'xmlelement(' +
+                    'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
+                    'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
+
+                    ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then value else util.xmlEscape(value2) endif ) ' +
+                ' endif '+
+                ')' + 
                 'from openxml(r ,''/row/*'') '+
                 'with ( name long varchar ''@mp:localname'', value xml ''./@mp:xmltext'', value2 long varchar ''.'') as r ' +
                 ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
@@ -32,7 +39,7 @@ begin
         ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
         ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t';
     
-    -- message 'ar.processRawData @sql = ', @sql;
+    message 'ar.processRawData @sql = ', @sql;
     set @sql = 'set @result = (' + @sql +')';
     
     execute immediate @sql;

@@ -23,6 +23,7 @@ begin
     declare @from long varchar;
     declare @where long varchar;
     declare @where2 long varchar;
+    declare @extra long varchar;
     declare @error long varchar;
     declare @i integer;
     declare @pos integer;
@@ -50,7 +51,10 @@ begin
         primaryColumn long varchar,
         foreignColumn long varchar
     );
-                                                                  
+        
+        
+    call ar.parseVariables();
+    
     -- parse url
     set @url = substr(@url, locate(@url,'/') +1);
 
@@ -132,11 +136,24 @@ begin
     
     set @columns = ar.parseColumns(@entityId, @columns, @entityAlias, @entityType);
     
+    if exists(select *
+                from ar.entityIdAndType('dbo.extra')
+               where entityId is not null) and ar.isColumn(@entity, 'id') = 1 then
+       
+        set @extra = '(select xmlagg(xmlelement(''extra'', xmlattributes(et.code as "name"), e.value)) '+
+                     'from dbo.extra e join dbo.etype et on e.etype = et.id ' +
+                     'where e.record_id = ' + @entityAlias + '.id '+
+                     'and et.table_name = ''' + substr(@entity, locate(@entity,'.') +1) + ''')' +
+                     'as [___extras]';
+          
+    end if;
+    
     
     set @sql = 'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
                ' top ' + cast(@pageSize as varchar(64)) + ' ' +
                ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-               ' ' + @columns + ' ';
+               ' ' + @columns +
+               if @extra is not null then ',' + @extra else '' endif + ' ';
                
     for lloop as ccur cursor for
     select entityId as c_entityId,
