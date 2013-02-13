@@ -36,6 +36,11 @@ begin
         name long varchar,
         alias long varchar,
         parsedName long varchar,
+        rawPredicate long varchar
+    );
+    
+    declare local temporary table #predicate(
+        entityId integer,
         predicate long varchar,
         predicateColumn long varchar
     );
@@ -71,12 +76,11 @@ begin
 
     insert into #entity with auto name
     select name,
-           predicate
+           rawPredicate
       from openstring(value @url)
-           with (name long varchar, predicate long varchar)
+           with (name long varchar, rawPredicate long varchar)
            option(delimited by '/' row delimited by '~') as t
      where name like '%.%';
-     
         
     --set @result = (select * from #entity for xml raw, elements);
     --return @result;
@@ -104,7 +108,7 @@ begin
     -- predicate parsing  
     call ar.parsePredicate();
     
-    --set @result = (select * from #entity for xml raw, elements);
+    --set @result = (select * from #predicate for xml raw, elements);
     --return @result;
        
     delete from #variable
@@ -176,8 +180,8 @@ begin
                                               where ar.isColumn(c_name, name, 1) = 1
                                               union
                                              select predicate
-                                               from #entity
-                                              where name = c_name
+                                               from #predicate
+                                              where entityId = c_id
                                                 and predicate like '%=%'
                                                 and ar.isColumn(c_name, predicateColumn, 1) = 1) as t) + 
                                     ') as ' + c_alias;
@@ -233,12 +237,12 @@ begin
                      and v.name not like '%:'
                      and ar.isColumn(e.name, v.name) = 1);
                      
-    set @where2 = (select list(alias + '.' +predicate, ' and ')
-                     from #entity
-                    where (predicate like '%=%'
-                       or predicate like '%<%'
-                       or predicate like '%>%')
-                      and ar.isColumn(name, predicateColumn) = 1 );
+    set @where2 = (select list(e.alias + '.' + p.predicate, ' and ')
+                     from #entity e join #predicate p on e.id = p.entityId
+                    where (p.predicate like '%=%'
+                       or p.predicate like '%<%'
+                       or p.predicate like '%>%')
+                      and ar.isColumn(e.name, p.predicateColumn) = 1 );
                       
     set @where = (select list(d, ' and ') as li
                     from (select @where as d union select @where2) as t
