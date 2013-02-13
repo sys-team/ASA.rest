@@ -115,7 +115,7 @@ begin
             set @response = ar.getCollection(@entityId, @pageSize, @pageNumber);
     
         when 'sp' then
-            set @response = ar.getSp(@entity, @entityId, @pageSize, @pageNumber, @orderBy, null, @columns, @orderDir);
+            set @response = ar.getQuery(@url);
             
         when 'query' then
             set @response = ar.getQuery(@url);

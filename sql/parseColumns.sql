@@ -1,7 +1,8 @@
 create or replace  function ar.parseColumns(
     @entityId integer,
     @columns long varchar,
-    @alias long varchar default null
+    @alias long varchar default null,
+    @entityType long varchar default 'table'
 )
 returns long varchar
 begin
@@ -25,6 +26,21 @@ begin
      where table_id = @entityId
        and (@columns ='*'
         or name is not null)
+       and @entityType = 'table'
+    union
+    select p.parm_name
+     from sys.sysprocparm p left outer join (select name
+                                               from openstring(value @columns)
+                                                    with(name long varchar)
+                                                    option(delimited by '@' row delimited by ',') as c
+                                              where name not like '%(%)'
+                                              union distinct
+                                              select 'xid') as t on p.parm_name = t.name
+     where p.proc_id = @entityId
+       and (@columns ='*'
+        or name is not null)
+       and @entityType = 'sp'
+       and parm_type in (1,4)
        
     do
         if length(@result) <> 0 then

@@ -14,6 +14,7 @@ begin
     declare @entity long varchar;
     declare @entityId integer;
     declare @entityAlias long varchar;
+    declare @entityType long varchar;
     declare @prevName long varchar;
     declare @prevEntityId integer;
     declare @prevAlias long varchar;
@@ -25,10 +26,12 @@ begin
     declare @error long varchar;
     declare @i integer;
     declare @pos integer;
+    declare @currentEntity long varchar;
     
     declare local temporary table #entity(
         id integer default autoincrement,
         entityId integer,
+        entityType long varchar,
         name long varchar,
         alias long varchar,
         parsedName long varchar,
@@ -69,35 +72,47 @@ begin
            with (name long varchar, predicate long varchar)
            option(delimited by '/' row delimited by '~') as t
      where name like '%.%';
+     
+        
+    --set @result = (select * from #entity for xml raw, elements);
+    --return @result;
       
     update #entity
        set entityId = l.entityId,
+           entityType = l.entityType,
            parsedName = ar.parseEntity(name),
-           alias = 'tab' + cast(id as varchar(24))
-      from #entity outer apply (select entityId from ar.entityIdAndType(name,'table')) as l;
+           alias = 't' + cast(id as varchar(24))
+      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name)) as l;
       
-    -- predicate parsing  
-    call ar.parsePredicate();
-       
-    delete from #variable
-     where name in ('id','xid');
-     
     -- error
     set @error = (select list(name)
                     from #entity
                    where entityId is null);
                    
-    if @error <>'' then
+    if @error <> '' then
         raiserror 55555 'Entity %1! not found', @error;
         return;
     end if;
+      
+    --set @result = (select * from #entity for xml raw, elements);
+    --return @result;
+    
+    -- predicate parsing  
+    call ar.parsePredicate();
+    
+    --set @result = (select * from #entity for xml raw, elements);
+    --return @result;
+       
+    delete from #variable
+     where name in ('id','xid');
     
     -- last entity
     select top 1
            name,
            entityId,
-           alias
-      into @entity, @entityId, @entityAlias
+           alias,
+           entityType
+      into @entity, @entityId, @entityAlias, @entityType
       from #entity
      order by id desc;
      
@@ -115,7 +130,7 @@ begin
         set @columns = '*';
     end if;
     
-    set @columns = ar.parseColumns(@entityId, @columns, @entityAlias);
+    set @columns = ar.parseColumns(@entityId, @columns, @entityAlias, @entityType);
     
     
     set @sql = 'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
@@ -125,6 +140,7 @@ begin
                
     for lloop as ccur cursor for
     select entityId as c_entityId,
+           entityType as c_entityType,
            name as c_name,
            alias as c_alias,
            parsedName as c_parsedName,
@@ -132,9 +148,26 @@ begin
       from #entity
       order by id
     do
+        case c_entityType
+            when 'table' then
+                set @currentEntity = c_parsedName + ' as ' + c_alias;
+            when 'sp' then
+                set @currentEntity = c_parsedName + '(' +
+                                    (select list(d)
+                                       from (select '[' + name + ']=' + value as d
+                                               from #variable
+                                              where ar.isColumn(c_name, name, 1) = 1
+                                              union
+                                             select predicate
+                                               from #entity
+                                              where name = c_name
+                                                and predicate like '%=%'
+                                                and ar.isColumn(c_name, predicateColumn, 1) = 1) as t) + 
+                                    ') as ' + c_alias;
+        end case;
     
         if c_id = 1 then
-            set @from = c_parsedName + ' as ' + c_alias;
+            set @from = @currentEntity;
         else
         
             delete from #fk;
@@ -155,17 +188,17 @@ begin
             set @from  = @from + 
                         coalesce((select top 1
                                          ' join ' +
-                                         c_parsedName + ' as ' + c_alias + ' on ' +
+                                         @currentEntity + ' on ' +
                                          @prevAlias + '.' + primaryColumn + '=' + c_alias + '.' + foreignColumn
                                     from #fk 
                                    where entityName = @prevName),
                                  (select top 1
                                          ' join ' +
-                                         c_parsedName + ' as ' + c_alias + ' on ' +
+                                         @currentEntity + ' on ' +
                                          @prevAlias + '.' + foreignColumn + '=' + c_alias + '.' + primaryColumn
                                     from #fk1
                                    where entityName = c_name),
-                                  ', ' + c_parsedName +' as ' + c_alias);
+                                  ', ' + @currentEntity );
 
         
         end if;
@@ -185,13 +218,17 @@ begin
                      
     set @where2 = (select list(alias + '.' +predicate, ' and ')
                      from #entity
-                    where predicate like '%=%'
+                    where (predicate like '%=%'
                        or predicate like '%<%'
-                       or predicate like '%>%');
-
-    set @sql = @sql + 'from ' + @from
-               + if @where <> '' or @where2 <> '' then ' where ' + @where else '' endif +
-               if @where <> '' then ' and ' else '' endif + @where2 +
+                       or predicate like '%>%')
+                      and ar.isColumn(name, predicateColumn) = 1 );
+                      
+    set @where = (select list(d, ' and ') as li
+                    from (select @where as d union select @where2) as t
+                   where isnull(d, '') <> '');
+                      
+    set @sql = @sql + 'from ' + @from + 
+               if @where <> '' then ' where ' else '' endif + @where +
                if @orderBy is not null then ' order by ' + @entityAlias + '.' + @orderBy + ' ' + @orderDir else '' endif +
                ' for xml raw, elements';
     
@@ -205,7 +242,7 @@ begin
     
     execute immediate @sql; 
 
-    set @result = ar.processRawData(@entity, @entityId, 'table', @rawData);    
+    set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);    
     
     return @result;
 end

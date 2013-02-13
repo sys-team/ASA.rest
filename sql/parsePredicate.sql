@@ -10,7 +10,19 @@ begin
        set predicate = 'xid=' + predicate
      where util.strtoxid(predicate) is not null
        and isnull(predicate,'') <> '';
+    ---
+    update #entity
+       set predicateColumn = left(predicate, locate(predicate,'<')- 1)
+     where predicateColumn like '%<%';
      
+    update #entity
+       set predicateColumn = left(predicate, locate(predicate,'>')- 1)
+     where predicateColumn like '%>%';
+     
+    update #entity
+       set predicateColumn = left(predicate, locate(predicate,'=')- 1)
+     where predicateColumn is null;
+    ---
     update #entity
        set predicate = '[' + replace(predicate,'=',']=''') + ''''
      where isnull(predicate,'') <> ''

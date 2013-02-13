@@ -8,8 +8,8 @@ begin
                where sp.proc_name =  substr(@entity, locate(@entity,'.') +1)
                  and su.user_name =  left(@entity, locate(@entity,'.') -1)
                  and p.parm_name = @columnName
-                 and (p.parm_mode_in = 'Y' and @procMode = 1
-                  or p.parm_mode_out = 'Y' and @procMode = 0))
+                 and (p.parm_type = 0 and @procMode = 1
+                  or p.parm_type in (1,4) and @procMode = 0))
     or exists(select *
                 from sys.systable st join sys.sysuserperm su on st.creator = su.user_id
                                      join sys.syscolumn c on c.table_id = st.table_id

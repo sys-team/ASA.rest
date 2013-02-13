@@ -10,7 +10,6 @@ read c:\\sites\\ASA.rest\\sql\\getCollection.sql;
 read c:\\sites\\ASA.rest\\sql\\getEntity.sql;
 read c:\\sites\\ASA.rest\\sql\\getQuery.sql;
 read c:\\sites\\ASA.rest\\sql\\getRecordByXid.sql;
-read c:\\sites\\ASA.rest\\sql\\getSp.sql;
 read c:\\sites\\ASA.rest\\sql\\gut.sql;
 read c:\\sites\\ASA.rest\\sql\\gutFindObject.sql;
 read c:\\sites\\ASA.rest\\sql\\gutGet.sql;
