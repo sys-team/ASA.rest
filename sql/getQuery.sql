@@ -76,49 +76,9 @@ begin
            alias = 'tab' + cast(id as varchar(24))
       from #entity outer apply (select entityId from ar.entityIdAndType(name,'table')) as l;
       
-    update #entity
-       set predicate = 'id=' + predicate
-     where isnumeric(predicate) = 1
-       and isnull(predicate,'') <> '';
-     
-    update #entity
-       set predicate = 'xid=' + predicate
-     where util.strtoxid(predicate) is not null
-       and isnull(predicate,'') <> '';
-     
-    update #entity
-       set predicate = '[' + replace(predicate,'=',']=''') + ''''
-     where isnull(predicate,'') <> ''
-       and predicate not like '%<%'
-       and predicate not like '%>%';
-     
-    update #entity
-       set predicate = '[' + replace(predicate,'<=',']<=''') + ''''
-     where isnull(predicate,'') <> ''
-       and predicate like '%<=%';
+    -- predicate parsing  
+    call ar.parsePredicate();
        
-    update #entity
-       set predicate = '[' + replace(predicate,'>=',']>=''') + ''''
-     where isnull(predicate,'') <> ''
-       and predicate like '%>=%';
-       
-    update #entity
-       set predicate = '[' + replace(predicate,'<',']<''') + ''''
-     where isnull(predicate,'') <> ''
-       and predicate like '%<%'
-       and predicate not like '%<=%';
-       
-    update #entity
-       set predicate = '[' + replace(predicate,'>',']>''') + ''''
-     where isnull(predicate,'') <> ''
-       and predicate like '%>%'
-       and predicate not like '%>=%';
-      
-    update #entity
-       set predicate = csconvert(predicate, 'char_charset', 'utf-8');
-       
-    --set @result = (select * from #entity for xml raw, elements);
-    --return @result;
     delete from #variable
      where name in ('id','xid');
      

@@ -7,6 +7,8 @@ begin
     set @authType = left(@code, locate(@code,' ')-1);
     set @code = replace(@code, @authType + ' ', '');
     
+    return 1;
+    
     case @authType
         when 'Basic' then
         
