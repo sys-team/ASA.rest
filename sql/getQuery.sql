@@ -23,6 +23,7 @@ begin
     declare @from long varchar;
     declare @where long varchar;
     declare @where2 long varchar;
+    declare @whereJoin long varchar;
     declare @extra long varchar;
     declare @error long varchar;
     declare @i integer;
@@ -43,6 +44,13 @@ begin
         entityId integer,
         predicate long varchar,
         predicateColumn long varchar
+    );
+    
+    declare local temporary table #joins(
+        parent integer,
+        child integer,
+        parentColumn long varchar,
+        childColumn long varchar
     );
 
     declare local temporary table #fk(
@@ -109,10 +117,8 @@ begin
     call ar.parsePredicate();
     
     --set @result = (select * from #predicate for xml raw, elements);
+    --set @result = @result + (select * from #joins for xml raw, elements);
     --return @result;
-       
-    delete from #variable
-     where name in ('id','xid');
     
     -- last entity
     select top 1
@@ -153,11 +159,7 @@ begin
     end if;
     
     
-    set @sql = 'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
-               ' top ' + cast(@pageSize as varchar(64)) + ' ' +
-               ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-               ' ' + @columns +
-               if @extra is not null then ',' + @extra else '' endif + ' ';
+
                
     for lloop as ccur cursor for
     select entityId as c_entityId,
@@ -220,6 +222,13 @@ begin
                                     from #fk1
                                    where entityName = c_name),
                                   ', ' + @currentEntity );
+                                  
+            -- auto distinct
+            if exists (select *
+                         from #fk1
+                        where entityName = c_name) then
+                set @distinct = 'yes'
+            end if;
 
         
         end if;
@@ -230,6 +239,16 @@ begin
         set @prevParsedName = c_parsedName;
     
     end for;
+    
+    set @sql = 'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
+               ' top ' + cast(@pageSize as varchar(64)) + ' ' +
+               ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
+               ' ' + @columns +
+               if @extra is not null then ',' + @extra else '' endif + ' ';
+               
+    set @whereJoin = (select list(p.alias +'.[' + j.parentColumn + '] = ' + c.alias + '.[' + j.childColumn + ']', ' and ')
+                        from #joins j join #entity p on j.parent = p.id
+                                      join #entity c on j.child = c.id);
     
     set @where = (select list(e.alias + '.[' + v.name + ']' + v.operator + ' ' + v.value, ' and ')
                     from #variable v, #entity e
@@ -245,7 +264,7 @@ begin
                       and ar.isColumn(e.name, p.predicateColumn) = 1 );
                       
     set @where = (select list(d, ' and ') as li
-                    from (select @where as d union select @where2) as t
+                    from (select @whereJoin as d union select @where union select @where2) as t
                    where isnull(d, '') <> '');
                       
     set @sql = @sql + 'from ' + @from + 

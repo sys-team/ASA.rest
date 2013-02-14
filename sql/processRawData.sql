@@ -21,7 +21,7 @@ begin
                     'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
                     'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
 
-                    ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then value else util.xmlEscape(value2) endif ) ' +
+                    ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml'' then ar.processXml(value) else util.xmlEscape(value2) endif ) ' +
                 ' endif '+
                 ')' + 
                 'from openxml(r ,''/row/*'') '+
