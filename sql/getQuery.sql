@@ -25,13 +25,13 @@ begin
     declare @from long varchar;
     declare @where long varchar;
     declare @where2 long varchar;
-    declare @whereJoin long varchar;
-    declare @permJoin long varchar;    
+    declare @whereJoin long varchar;  
     declare @extra long varchar;
     declare @error long varchar;
     declare @i integer;
     declare @pos integer;
     declare @currentEntity long varchar;
+    declare @direction long varchar;
     
     declare local temporary table #entity(
         id integer default autoincrement,
@@ -41,7 +41,7 @@ begin
         alias long varchar,
         parsedName long varchar,
         rawPredicate long varchar,
-        rawAuthPredicate long varchar
+        rawPermPredicate long varchar
     );
     
     declare local temporary table #predicate(
@@ -50,7 +50,7 @@ begin
         predicateColumn long varchar
     );
     
-    declare local temporary table #authPredicate(
+    declare local temporary table #permPredicate(
         entityId integer,
         predicate long varchar,
         predicateColumn long varchar
@@ -107,12 +107,13 @@ begin
            entityType = l.entityType,
            parsedName = ar.parseEntity(name),
            alias = 't' + cast(id as varchar(24)),
-           rawAuthPredicate = roles.data
+           rawPermPredicate = roles.data
       from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name)) as l
                    left outer join (select code,
-                                           data
+                                           list(data, '&') as data
                                       from openxml(@roles,'/*:response/*:roles/*:role')
-                                            with(code long varchar '*:code', data long varchar '*:data')) as roles on roles.code = #entity.name;
+                                            with(code long varchar '*:code', data long varchar '*:data')
+                                     group by code) as roles on roles.code = #entity.name;
       
     -- error
     set @error = (select list(name)
@@ -195,7 +196,7 @@ begin
     if not exists(select *
                     from #entity
                    where id = 1
-                     and rawAuthPredicate is not null) and @isDba = 0 then
+                     and rawPermPredicate is not null) and @isDba = 0 then
                     
         raiserror 55555 'Permission denied on entity %1!', @entity;
         return;
@@ -207,7 +208,8 @@ begin
            name as c_name,
            alias as c_alias,
            parsedName as c_parsedName,
-           id as c_id
+           id as c_id,
+           rawPermPredicate as c_rawPermPredicate
       from #entity
       order by id
     do
@@ -267,17 +269,30 @@ begin
             if exists (select *
                          from #fk1
                         where entityName = c_name) then
+                        
                 set @distinct = 'yes';
                 set @direction = 'up';
+                
             elseif exists (select *
                          from #fk
                         where entityName = @prevName) then
+                    
                 set @direction = 'down';
             else
                 set @direction = 'cross';
             end if;
-
-        
+            
+            message 'ar.getQuery @direction = ', @direction;
+            -- pemission check by direction
+            if @isDba = 0 then
+                if @direction in ('up', 'cross') and c_rawPermPredicate is null then
+               
+                    raiserror 55555 'Permission denied on up or cross join with %1!', c_name;
+                    return;
+                    
+                end if;
+            end if;
+            
         end if;
         
         set @prevEntityId = c_entityId;
@@ -296,7 +311,7 @@ begin
     set @whereJoin = (select list(p.alias +'.[' + j.parentColumn + '] = ' + c.alias + '.[' + j.childColumn + ']', ' and ')
                         from #joins j join #entity p on j.parent = p.id
                                       join #entity c on j.child = c.id);
-    
+                                      
     set @where = (select list(e.alias + '.[' + v.name + ']' + v.operator + ' ' + v.value, ' and ')
                     from #variable v, #entity e
                    where v.name <> 'url'

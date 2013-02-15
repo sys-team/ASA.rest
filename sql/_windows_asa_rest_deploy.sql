@@ -1,5 +1,6 @@
 read c:\\sites\\ASA.rest\\sql\\_tables.sql;
 read c:\\sites\\ASA.rest\\sql\\addElement.sql;
+read c:\\sites\\ASA.rest\\sql\\arest_service.sql;
 read c:\\sites\\ASA.rest\\sql\\columnDatatype.sql;
 read c:\\sites\\ASA.rest\\sql\\entityDescription.sql;
 read c:\\sites\\ASA.rest\\sql\\entityIdAndType.sql;

@@ -43,7 +43,9 @@ begin
     if varexists('@roles') = 0 then create variable @roles xml end if;
     if varexists('@isDba') = 0 then create variable @isDba integer end if;
     
-    set @roles = util.UOAuthAuthorize(@code);
+    if @authType <> 'basic' then
+        set @roles = util.UOAuthAuthorize(@code);
+    end if;
     
     -- http variables
     insert into #variable with auto name
@@ -69,15 +71,20 @@ begin
     if not exists(select *
                     from openxml(@roles,'/*:response/*:roles/*:role')
                          with(code long varchar '*:code')
-                   where code = 'authenticated') then
+                   where code = 'authenticated') and @authType <> 'basic' then
                    
         set @response = xmlelement('error', 'Not authenticated');
     else
         -- DBA authority check
-        set @isDba = (select count(*)
-                        from openxml(@roles,'/*:response/*:roles/*:role')
-                             with(code long varchar '*:code')
-                       where code = @@servername + '.' + db_name() + '.dba');
+        if @authType <> 'basic' then
+            set @isDba = (select count(*)
+                            from openxml(@roles,'/*:response/*:roles/*:role')
+                                 with(code long varchar '*:code', data long varchar '*:data')
+                           where code = @@servername + '.' + db_name()
+                             and data = 'dba');
+        else
+            set @isDba = 1;
+        end if;
            
         case @action
             when 'get' then
