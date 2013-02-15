@@ -22,6 +22,7 @@ read c:\\sites\\ASA.rest\\sql\\parseEntity.sql;
 read c:\\sites\\ASA.rest\\sql\\parsePredicate.sql;
 read c:\\sites\\ASA.rest\\sql\\parseVariables.sql;
 read c:\\sites\\ASA.rest\\sql\\permissionByCode.sql;
+read c:\\sites\\ASA.rest\\sql\\pkList.sql;
 read c:\\sites\\ASA.rest\\sql\\processRawData.sql;
 read c:\\sites\\ASA.rest\\sql\\put.sql;
 read c:\\sites\\ASA.rest\\sql\\rest.sql;

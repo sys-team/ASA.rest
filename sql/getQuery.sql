@@ -24,6 +24,7 @@ begin
     declare @where long varchar;
     declare @where2 long varchar;
     declare @whereJoin long varchar;
+    declare @permJoin long varchar;    
     declare @extra long varchar;
     declare @error long varchar;
     declare @i integer;
@@ -249,8 +250,12 @@ begin
                         where entityName = c_name) then
                 set @distinct = 'yes';
                 set @direction = 'up';
-            else
+            elseif exists (select *
+                         from #fk
+                        where entityName = @prevName) then
                 set @direction = 'down';
+            else
+                set @direction = 'cross';
             end if;
 
         

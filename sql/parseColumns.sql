@@ -15,18 +15,21 @@ begin
     end if;
     
     for lloop as ccur cursor for
-    select column_name as c_column_name
-      from sys.syscolumn left outer join (select name
-                                            from openstring(value @columns)
-                                                 with(name long varchar)
-                                                 option(delimited by '@' row delimited by ',') as c
-                                           where name not like '%(%)'
-                                           union distinct
-                                           select 'xid') as t on column_name = t.name
-     where table_id = @entityId
+    select c.column_name as c_column_name
+      from sys.syscolumn c left outer join (select name
+                                             from openstring(value @columns)
+                                                  with(name long varchar)
+                                                  option(delimited by '@' row delimited by ',') as c
+                                            where name not like '%(%)'
+                                            union distinct
+                                            select 'xid') as t on c.column_name = t.name
+                           join sys.sysdomain d on c.domain_id = d.domain_id
+     where c.table_id = @entityId
        and (@columns ='*'
-        or name is not null)
+        or t.name is not null)
        and @entityType = 'table'
+       and (d.domain_name not in ('long binary')
+        or @columns <> '*')
     union
     select p.parm_name
      from sys.sysprocparm p left outer join (select name

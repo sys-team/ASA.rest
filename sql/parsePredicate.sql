@@ -36,11 +36,13 @@ begin
     update #predicate
        set predicate = replace(predicate, '"', '');    
     
-
     update #predicate
-       set predicate = 'id=' + predicate
-     where isnumeric(predicate) = 1
-       and isnull(predicate,'') <> '';
+       set predicate = (select top (1)
+                               column_name
+                          from ar.pkList(@entityId = e.entityId)) + '=' + p.predicate
+      from #predicate p  join #entity e on p.entityId = e.id
+     where isnumeric(p.predicate) = 1
+       and isnull(p.predicate,'') <> '';
      
     update #predicate
        set predicate = 'xid=' + predicate
