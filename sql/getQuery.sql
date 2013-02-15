@@ -1,16 +1,18 @@
 create or replace function ar.getQuery(
     @url long varchar,
-    @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
-    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
-    @orderBy long varchar default isnull(http_variable('order-by:'),'id'),
-    @columns long varchar default http_variable('columns:'),
-    @orderDir long varchar default http_variable('order-dir:'),
-    @distinct long varchar default http_variable('distinct:')
+    @pageSize integer default coalesce(nullif(http_header('page-size'),''), http_variable('page-size:'),10),
+    @pageNumber integer default coalesce(nullif(http_header('page-number'),''), http_variable('page-number:'),1),
+    @orderBy long varchar default coalesce(nullif(http_header('order-by'),''),http_variable('order-by:'),'id'),
+    @columns long varchar default coalesce(nullif(http_header('columns'),''),http_variable('columns:')),
+    @orderDir long varchar default coalesce(nullif(http_header('order-dir'),''),http_variable('order-dir:')),
+    @distinct long varchar default coalesce(nullif(http_header('distinct'),''),http_variable('distinct:')),
+    @longValues long varchar default coalesce(nullif(http_header('long-values'),''),http_variable('long-values:'))    
 )
 returns xml
 begin
     declare @result xml;
     declare @rawData xml;
+    declare @id integer;
     declare @entity long varchar;
     declare @entityId integer;
     declare @entityAlias long varchar;
@@ -72,8 +74,7 @@ begin
         primaryColumn long varchar,
         foreignColumn long varchar
     );
-        
-        
+
     call ar.parseVariables();
     
     -- parse url
@@ -125,7 +126,7 @@ begin
       
     --set @result = (select * from #entity for xml raw, elements);
     --return @result;
-    message 'ar.getQuery @roles = ', @roles;
+    --message 'ar.getQuery @roles = ', @roles;
     
     -- predicate parsing  
     call ar.parsePredicate();
@@ -136,11 +137,12 @@ begin
     
     -- last entity
     select top 1
+           id,
            name,
            entityId,
            alias,
            entityType
-      into @entity, @entityId, @entityAlias, @entityType
+      into @id, @entity, @entityId, @entityAlias, @entityType
       from #entity
      order by id desc;
      
@@ -158,7 +160,24 @@ begin
         set @columns = '*';
     end if;
     
-    set @columns = ar.parseColumns(@entityId, @columns, @entityAlias, @entityType);
+    -- If one record by key then @longValues = yes
+    if exists(select *
+                from (select name
+                        from #variable
+                       union
+                      select predicateColumn
+                        from #predicate
+                       where entityId = @id) as t
+              where name in (select top (1)
+                                    column_name
+                               from ar.pkList('', @entityId)
+                              union
+                             select 'xid')) then
+                                                                  
+        set @longValues = 'yes';
+    end if;
+    
+    set @columns = ar.parseColumns(@entityId, @columns, @entityAlias, @entityType, if @longValues = 'yes' then 1 else 0 endif);
     
     if exists(select *
                 from ar.entityIdAndType('dbo.extra')

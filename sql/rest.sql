@@ -1,8 +1,9 @@
 create or replace function ar.rest(
     @url long varchar,
+    @authType long varchar default 'basic',
     @code long varchar default isnull(nullif(replace(http_header('Authorization'), 'Bearer ', ''),''), http_variable('authorization:')),
-    @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
-    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif
+    @pageSize integer default coalesce(nullif(http_header('page-size'),''), http_variable('page-size:'),10),
+    @pageNumber integer default coalesce(nullif(http_header('page-number'),''), http_variable('page-number:'),1)
 )
 returns xml
 begin

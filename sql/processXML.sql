@@ -15,4 +15,3 @@ begin
     return @result;
 end
 ;
-    

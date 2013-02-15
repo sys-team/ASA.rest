@@ -2,13 +2,14 @@ create or replace  function ar.parseColumns(
     @entityId integer,
     @columns long varchar,
     @alias long varchar default null,
-    @entityType long varchar default 'table'
+    @entityType long varchar default 'table',
+    @longValues integer default 0
 )
 returns long varchar
 begin
     declare @result long varchar;
     declare @i integer;
-    
+
     if @columns <> '*' then
         set @columns = replace(@columns, '[', '''');
         set @columns = replace(@columns, ']', '''');
@@ -29,7 +30,8 @@ begin
         or t.name is not null)
        and @entityType = 'table'
        and (d.domain_name not in ('long binary')
-        or @columns <> '*')
+        or @columns <> '*'
+        or @longValues = 1)
     union
     select p.parm_name
      from sys.sysprocparm p left outer join (select name
