@@ -37,10 +37,17 @@ begin
         name long varchar,
         alias long varchar,
         parsedName long varchar,
-        rawPredicate long varchar
+        rawPredicate long varchar,
+        rawAuthPredicate long varchar
     );
     
     declare local temporary table #predicate(
+        entityId integer,
+        predicate long varchar,
+        predicateColumn long varchar
+    );
+    
+    declare local temporary table #authPredicate(
         entityId integer,
         predicate long varchar,
         predicateColumn long varchar
@@ -97,8 +104,13 @@ begin
        set entityId = l.entityId,
            entityType = l.entityType,
            parsedName = ar.parseEntity(name),
-           alias = 't' + cast(id as varchar(24))
-      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name)) as l;
+           alias = 't' + cast(id as varchar(24)),
+           rawAuthPredicate = roles.data
+      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name)) as l
+                   left outer join (select code,
+                                           data
+                                      from openxml(@roles,'/*:response/*:roles/*:role')
+                                            with(code long varchar '*:code', data long varchar '*:data')) as roles on roles.code = #entity.name;
       
     -- error
     set @error = (select list(name)
@@ -112,6 +124,7 @@ begin
       
     --set @result = (select * from #entity for xml raw, elements);
     --return @result;
+    message 'ar.getQuery @roles = ', @roles;
     
     -- predicate parsing  
     call ar.parsePredicate();
@@ -158,8 +171,15 @@ begin
           
     end if;
     
-    
-
+    -- root entity permission check
+    if not exists(select *
+                    from #entity
+                   where id = 1
+                     and rawAuthPredicate is not null) and @isDba = 0 then
+                    
+        raiserror 55555 'Permission denied on entity %1!', @entity;
+        return;
+    end if;
                
     for lloop as ccur cursor for
     select entityId as c_entityId,
@@ -223,11 +243,14 @@ begin
                                    where entityName = c_name),
                                   ', ' + @currentEntity );
                                   
-            -- auto distinct
+            -- auto distinct and direction
             if exists (select *
                          from #fk1
                         where entityName = c_name) then
-                set @distinct = 'yes'
+                set @distinct = 'yes';
+                set @direction = 'up';
+            else
+                set @direction = 'down';
             end if;
 
         

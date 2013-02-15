@@ -1,8 +1,8 @@
 create or replace function ar.rest(
     @url long varchar,
+    @code long varchar default isnull(nullif(replace(http_header('Authorization'), 'Bearer ', ''),''), http_variable('authorization:')),
     @pageSize integer default if isnumeric(http_variable('page-size:')) = 1 then http_variable('page-size:') else 10 endif,
-    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif,
-    @code long varchar default isnull(http_header('Authorization'),http_variable('authorization:') )
+    @pageNumber integer default if isnumeric(http_variable('page-number:')) = 1 then http_variable('page-number:') else 1 endif
 )
 returns xml
 begin
@@ -11,10 +11,10 @@ begin
     declare @errorCode long varchar;
     declare @entity long varchar;
     declare @action long varchar;
-    declare @authorized integer;
     declare @cts datetime;
     declare @varName long varchar;
     declare @rowcount integer;
+    declare @maxLogLength integer;
     
     declare local temporary table #variable(
         name long varchar,
@@ -27,13 +27,10 @@ begin
     set @cts = now();
     set @xid = newid();
 
-    
-     insert into ar.log with auto name
-     select @xid as xid,
+    insert into ar.log with auto name
+    select @xid as xid,
             @url as url,
             @code as code;
-            
-    message 'ar.rest start';
     
     select action,
            entity
@@ -41,8 +38,11 @@ begin
       from openstring(value @url)
            with (action long varchar, entity long varchar, id long varchar, parentEntity long varchar)
            option(delimited by '/') as t;
-           
-    set @authorized = ar.authorize(@code, @entity);
+    
+    if varexists('@roles') = 0 then create variable @roles xml end if;
+    if varexists('@isDba') = 0 then create variable @isDba integer end if;
+    
+    set @roles = util.UOAuthAuthorize(@code);
     
     -- http variables
     insert into #variable with auto name
@@ -64,10 +64,20 @@ begin
       into @entityId, @entityType
       from ar.entityIdAndType(@entity);
            
-    -- Authorization
-    if @authorized = 0 then
-        set @response = xmlelement('response', xmlelement('error', xmlattributes('NotAuthorized' as "code"), 'Not authorized'));
+    -- check @roles
+    if not exists(select *
+                    from openxml(@roles,'/*:response/*:roles/*:role')
+                         with(code long varchar '*:code')
+                   where code = 'authenticated') then
+                   
+        set @response = xmlelement('error', 'Not authenticated');
     else
+        -- DBA authority check
+        set @isDba = (select count(*)
+                        from openxml(@roles,'/*:response/*:roles/*:role')
+                             with(code long varchar '*:code')
+                       where code = @@servername + '.' + db_name() + '.dba');
+           
         case @action
             when 'get' then
                 set @response = ar.get(@url);
@@ -80,7 +90,8 @@ begin
             when 'link' then
                 set @response = ar.link(@url);
         end case;
-    end if;
+
+    end if; 
     
     set @rowcount = (select count(*)
                        from openxml(xmlelement('root',@response), '/root/d')
@@ -96,9 +107,12 @@ begin
                                                          @@servername as "servername",
                                                          db_name() as "dbname",
                                                          property('machinename') as "host"), @response);
+    
+    set @maxLogLength = 65536;
                                                          
     update ar.log
-       set response = left(@response,65536)
+       set response = if length(@response) > @maxLogLength then xmlelement('response','<![CDATA[' + left(@response,@maxLogLength) + ']]>')
+                      else @response endif
      where xid = @xid;
 
     return @response;

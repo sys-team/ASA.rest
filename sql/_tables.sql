@@ -1,5 +1,6 @@
 grant connect to ar;
-grant dba to ar; 
+grant dba to ar;
+comment on user ar is 'ASA.rest objects owner';
 
 create table if not exists ar.collection(
 

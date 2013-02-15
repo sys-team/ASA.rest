@@ -1,6 +1,5 @@
 read c:\\sites\\ASA.rest\\sql\\_tables.sql;
 read c:\\sites\\ASA.rest\\sql\\addElement.sql;
-read c:\\sites\\ASA.rest\\sql\\authorize.sql;
 read c:\\sites\\ASA.rest\\sql\\columnDatatype.sql;
 read c:\\sites\\ASA.rest\\sql\\entityDescription.sql;
 read c:\\sites\\ASA.rest\\sql\\entityIdAndType.sql;
@@ -25,8 +24,6 @@ read c:\\sites\\ASA.rest\\sql\\parseVariables.sql;
 read c:\\sites\\ASA.rest\\sql\\permissionByCode.sql;
 read c:\\sites\\ASA.rest\\sql\\processRawData.sql;
 read c:\\sites\\ASA.rest\\sql\\put.sql;
-read c:\\sites\\ASA.rest\\sql\\queryCode.sql;
-read c:\\sites\\ASA.rest\\sql\\queryRoles.sql;
 read c:\\sites\\ASA.rest\\sql\\rest.sql;
 read c:\\sites\\ASA.rest\\sql\\rest_service.sql;
 read c:\\sites\\ASA.rest\\sql\\spResultSet.sql;

@@ -23,8 +23,8 @@ begin
                   from openstring(value predicate)
                        with(d long varchar)
                        option(delimited by '~' row delimited by '`') as tt) as parent,
-              left(predicate, locate(predicate, '`') - 1) as parentColumn,
-              substr(predicate, locate(predicate, '`', -1) + 1) as childColumn
+              left(predicate, locate(predicate, '`') - 1) as childColumn,
+              substr(predicate, locate(predicate, '`', -1) + 1) as parentColumn
           from openstring(value c_rawPredicate)
                with(predicate long varchar)
                option(delimited by '~' row delimited by '&') as t
@@ -33,6 +33,8 @@ begin
          
     end for;
     
+    update #predicate
+       set predicate = replace(predicate, '"', '');    
     
 
     update #predicate
