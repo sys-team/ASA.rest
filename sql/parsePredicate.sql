@@ -42,6 +42,7 @@ begin
               from openstring(value c_rawPermPredicate)
                    with(predicate long varchar)
                    option(delimited by '~' row delimited by '&') as t
+             where predicate <> '*';
          
         end if; 
          

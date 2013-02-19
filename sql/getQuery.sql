@@ -21,6 +21,7 @@ begin
     declare @prevEntityId integer;
     declare @prevAlias long varchar;
     declare @prevParsedName long varchar;
+    declare @prevDirection long varchar;
     declare @sql long varchar;
     declare @from long varchar;
     declare @where long varchar;
@@ -282,12 +283,17 @@ begin
                 set @direction = 'cross';
             end if;
             
-            message 'ar.getQuery @direction = ', @direction;
+            -- message 'ar.getQuery @direction = ', @direction;
             -- pemission check by direction
             if @isDba = 0 then
-                if @direction in ('up', 'cross') and c_rawPermPredicate is null then
+                if @direction in ('cross') and c_rawPermPredicate is null then
                
-                    raiserror 55555 'Permission denied on up or cross join with %1!', c_name;
+                    raiserror 55555 'Permission denied on cross join with %1!', c_name;
+                    return;
+                    
+                elseif @direction in ('down') and c_rawPermPredicate is null and @prevDirection <> 'down' then
+                
+                    raiserror 55555 'Permission denied on down join with %1!', c_name;
                     return;
                     
                 end if;
@@ -299,6 +305,7 @@ begin
         set @prevName = c_name;
         set @prevAlias = c_alias;
         set @prevParsedName = c_parsedName;
+        set @prevDirection = @direction;
     
     end for;
     
