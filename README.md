@@ -4,6 +4,8 @@ ASA.rest
 arest/get
 ------------
 
+The same as rest/get
+
 rest/get
 ------------
 
@@ -29,26 +31,36 @@ set for last entity in query or long binary column exactly defined in 'columns' 
 ### url syntax
 
     ../rest/get/<owner1>.<entityName1>[/[<entity expression>[&<entity expression>...]]]
-    [/<owner2>.<entityName2>...][?<variable><logical operator><value>|<option>=<value>[&...]]
+    [/<owner2>.<entityName2>...][?<common filer expression>|<option>=<value>[&...]]
     
 * entity expression:
-  integer - value of 'id' column
-  guid - value of 'xid' column
-  <column name><logical operator><value> - 
-    
 
+  integer - value of 'id' column
+  
+  guid - value of 'xid' column
+  
+  <column name><logical operator><value> - filter expression for entity. Supported logical operators: =, <, >, <=, >=
+  
+  <entity - n column name>`[`..]<entity column name> - user defined join condition. n - number of entity left in url then current.
+  n equals count of ` between column names.
+  
+* common filter expression:
+  
+  <column name><logical operator><value> - Filters defined through variables applies to all entity in query which have column witn name = <column name>
+  Supported logical operators is =, <, >, <=, >=, in
+ 
 
 ### returns:
 
 xml with rows of last entity in query
 
 
-    url: ../rest/get/dbo.someTable?page-size:=1&page-number:=5
+    url: ../rest/get/dbo.someTable//dbo.someTable2/10?page-size:=1&page-number:=5
     
     <response xmlns="https://github.com/sys-team/ASA.rest" xid="0000" ts="2013-01-30 15:30:08.919"
       cts="2013-01-30 15:30:08.716" servername="SERVER" dbname="database" host="HOST">
-        <d name="dbo.someTable" xid="0000">
-            <integer name="id">1</integer>
+        <d name="dbo.someTable2" xid="0000">
+            <integer name="id">10</integer>
             <string name="name">Unit</string>
             <datetime name="ts">2009-04-29 15:40:29.733</datetime>
         </d>
