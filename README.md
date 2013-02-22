@@ -4,7 +4,9 @@ ASA.rest
 arest/get
 ------------
 
-The same as rest/get
+In development now.
+The same as rest/get, but uses UOAuth authorization instead of basic.
+User permissions defines based on UOAuth/roles response on access token.
 
 rest/get
 ------------
@@ -39,9 +41,9 @@ set for last entity in query or long binary column exactly defined in 'columns' 
   
   guid - value of 'xid' column
   
-  <column name><logical operator><value> - filter expression for entity. Supported logical operators: =, <, >, <=, >=
+    <column name><logical operator><value> - filter expression for entity. Supported logical operators: =, <, >, <=, >=
   
-  <entity - n column name>`[`..]<entity column name> - user defined join condition. n - number of entity left in url then current.
+    <entity - n column name>`[`..]<entity column name> - user defined join condition. n - number of entity left in url then current.
   n equals count of ` between column names.
   
 * common filter expression:
