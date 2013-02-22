@@ -1,30 +1,46 @@
 ASA.rest
 ============
 
-rest/addElement
+arest/get
 ------------
 
 rest/get
 ------------
 
-returns rows from table or stored procedure result set
+Returns result set of multi-entity query to ASA database. Joins entities based on foreign keys defined in database
+or user defined join condition. Result set contains fields of last enity in query.
+Uses the basic http authentification. User permissions the same as for database user.
 
-### url
+### options:
 
-    .../<owner>.<entityName>[/<xid or id>][?<columnName = filterExpression>...]
+Any option can be passed as http-header or http-variable. If passing as http-variable need colon be added to option name.
 
-### variables:
+* authorization - UOAuth access token (for arest service)
+* page-size -  rows per page, default 10
+* page-number - number of page from result set, default 1
+* order-by - order by expression, default 'id', if table or sp result set does not have 'id' column, no order by
+* columns - list of columns to select, default '*'
+* order-dir - order by direction, default is 'desc'
+* distinct - if 'yes' distinct clause applies to query 
+* long-values - if 'yes' shows long binary values in output. By default 'no' except then 'id' or 'xid' attribute
+set for last entity in query or long binary column exactly defined in 'columns' option
 
-* code - UOAuth access token
-* page-size: -  rows per page, default 10
-* page-number: - number of page from result set, default 1
-* order-by: - order by expression, default 'id', if table or sp result set does not have 'id' column, no order by
-* columns: - list of columns to select, default '*'
-* order-dir: - order by direction, default is 'desc'
+
+### url syntax
+
+    ../rest/get/<owner1>.<entityName1>[/[<entity expression>[&<entity expression>...]]]
+    [/<owner2>.<entityName2>...][?<variable><logical operator><value>|<option>=<value>[&...]]
+    
+* entity expression:
+  integer - value of 'id' column
+  guid - value of 'xid' column
+  <column name><logical operator><value> - 
+    
+
 
 ### returns:
 
-xml with rows
+xml with rows of last entity in query
 
 
     url: ../rest/get/dbo.someTable?page-size:=1&page-number:=5
@@ -38,13 +54,6 @@ xml with rows
         </d>
     </response>
 
-rest/link
-------------
 
-rest/make
-------------
-
-rest/put
-------------
 
 
