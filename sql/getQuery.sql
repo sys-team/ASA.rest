@@ -339,7 +339,10 @@ begin
                       
     set @sql = @sql + 'from ' + @from + 
                if @where <> '' then ' where ' else '' endif + @where +
-               if @orderBy is not null then ' order by ' + @entityAlias + '.' + @orderBy + ' ' + @orderDir else '' endif +
+               if @orderBy is not null
+                  and (@distinct <> 'yes' or locate(@columns, '[' + @orderBy + ']') <> 0) then
+                    ' order by ' + @entityAlias + '.' + @orderBy + ' ' + @orderDir
+                else '' endif +
                ' for xml raw, elements';
     
     --message 'ar.getQuery @sql = ', @sql;
