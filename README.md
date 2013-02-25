@@ -4,27 +4,29 @@ ASA.rest
 arest/get
 ------------
 
-In development now.
-The same as rest/get, but uses UOAuth authorization instead of basic.
-User permissions defines based on UOAuth/roles response on access token.
+Currently is in development.
+The same as rest/get, but uses UOAuth instead of basic authorization.
+User permissions are defined based on UOAuth/roles response on access token.
 
 rest/get
 ------------
 
-Returns result set of multi-entity query to ASA database. Joins entities based on foreign keys defined in database
-or user defined join condition. Result set contains fields of last enity in query.
-Uses the basic http authentification. User permissions the same as for database user.
+Returns result set of multi-entity query to ASA database.
+Entities are joined with database defined foreign keys or with user defined conditions.
+Result set contains fields of last enity in query.
+Uses the basic http authentification. User permissions are the same as for a database user.
 
 ### options:
 
-Any option can be passed as http-header or http-variable. If passing as http-variable need colon be added to option name.
+Any option can be passed as http-header or http-variable. 
+When specifying an option as http-variable, a colon must be added to its name. (i.e.:distinct:=yes)
 
 * authorization - UOAuth access token (for arest service)
 * page-size -  rows per page, default 10
-* page-number - number of page from result set, default 1
+* page-number - page number from the beginning of a result set, default 1
 * order-by - order by expression, default 'id', if table or sp result set does not have 'id' column, no order by
-* columns - list of columns to select, default '*'
-* order-dir - order by direction, default is 'desc'
+* columns - comma separated list of the columns to return in a result set, default '*'
+* order-dir - direction of an 'order by' clause, default is 'desc'
 * distinct - if 'yes' distinct clause applies to query 
 * long-values - if 'yes' shows long binary values in output. By default 'no' except then 'id' or 'xid' attribute
 set for last entity in query or long binary column exactly defined in 'columns' option
