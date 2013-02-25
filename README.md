@@ -43,14 +43,14 @@ set for last entity in query or long binary column exactly defined in 'columns' 
   
   guid - value of 'xid' column
   
-    <column name><logical operator><value> - filter expression for entity. Supported logical operators: =, <, >, <=, >=
+        <column name><logical operator><value> - filter expression for entity. Supported logical operators: =, <, >, <=, >=
   
-    <entity - n column name>`[`..]<entity column name> - user defined join condition. n - number of entity left in url then current.
+        <entity - n column name>`[`..]<entity column name> - user defined join condition. n - number of entity left in url then current.
   n equals count of ` between column names.
   
 * common filter expression: applies to all entity in the query which have column with name specifiedß
   
-  <column name><logical operator><value> - Filters defined through variables applies to all entity in query which have column witn name = <column name>
+    <column name><logical operator><value> - Filters defined through variables applies to all entity in query which have column witn name = <column name>
   Supported logical operators is =, <, >, <=, >=, in
  
 
