@@ -1,5 +1,5 @@
 ASA.rest
-============
+===========
 
 arest/get
 ------------
@@ -43,8 +43,9 @@ set for last entity in query or long binary column exactly defined in 'columns' 
   
   guid - value of 'xid' column
   
-        <column name><logical operator><value> - filter expression for entity. Supported logical operators: =, <, >, <=, >=
+	`<column name><logical operator><value>` - filter expression for entity. Supported logical operators: =, <, >, <=, >=, %= (sql 'like' operator)
   
+<<<<<<< HEAD
         <entity - n column name>`[`..]<entity column name> - user defined join condition. 
         n - number of entity left in url then current.
   n equals count of ` between column names.
@@ -53,6 +54,15 @@ set for last entity in query or long binary column exactly defined in 'columns' 
   
         <column name><logical operator><value> - Filters defined through variables applies to all entity in query which have column witn name = <column name>
   Supported logical operators is =, <, >, <=, >=, in
+=======
+    `<entity - n column name>`` [``..]<entity column name>` - user defined join condition. n - number of entity left in url then current.
+  n equals count of ` between column names.
+  
+* common filter expression: applies to all entity in the query which have column with name specified
+* 
+  `<column name><logical operator><value>` - Filters defined through variables applies to all entity in the query which have a column witn name = <column name>
+  Supported logical operators is =, <, >, <=, >=, = `<list of comma separated values>` (sql 'in' operator)
+>>>>>>> 'like' predicate
  
 
 ### returns:

@@ -65,6 +65,12 @@ begin
        and isnull(predicate,'') <> '';
     ---
     update #predicate
+       set predicate = '[' + replace(predicate,'%=','] like ''') + '''',
+           predicateColumn = left(predicate, locate(predicate,'%=') - 1)
+     where isnull(predicate,'') <> ''
+       and locate(predicate, '%=') <> 0;
+    
+    update #predicate
        set predicateColumn = left(predicate, locate(predicate,'<')- 1)
      where predicate like '%<%';
      
@@ -80,7 +86,8 @@ begin
        set predicate = '[' + replace(predicate,'=',']=''') + ''''
      where isnull(predicate,'') <> ''
        and predicate not like '%<%'
-       and predicate not like '%>%';
+       and predicate not like '%>%'
+       and predicate not like '%like%';
      
     update #predicate
        set predicate = '[' + replace(predicate,'<=',']<=''') + ''''

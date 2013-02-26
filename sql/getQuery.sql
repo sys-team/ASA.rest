@@ -330,7 +330,8 @@ begin
                      from #entity e join #predicate p on e.id = p.entityId
                     where (p.predicate like '%=%'
                        or p.predicate like '%<%'
-                       or p.predicate like '%>%')
+                       or p.predicate like '%>%'
+                       or p.predicate like '%like%')
                       and ar.isColumn(e.name, p.predicateColumn) = 1 );
                       
     set @where = (select list(d, ' and ') as li
