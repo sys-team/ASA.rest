@@ -20,7 +20,8 @@ begin
                           where sp.proc_name =  substr(@entityName, locate(@entityName,'.') +1)
                             and su.user_name =  left(@entityName, locate(@entityName,'.') -1)
                             and (@desiredType = 'sp'
-                             or @desiredType is null));
+                             or @desiredType is null)
+                            and not exists(select * from sys.sysprocparm where proc_id = sp.proc_id and parm_type = 4));
                             
         if @entityId is not null then      
             set @entityType = 'sp';
