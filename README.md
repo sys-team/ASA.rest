@@ -13,7 +13,7 @@ rest/get
 
 Returns result set of multi-entity query to ASA database.
 Entities are joined with database defined foreign keys or with user defined conditions.
-Result set contains fields of last enity in query.
+Result set contains fields of last entity in query.
 Uses the basic http authentification. User permissions are the same as for a database user.
 
 ### options:
@@ -24,7 +24,7 @@ When specifying an option as http-variable, a colon must be added to its name. (
 * authorization - UOAuth access token (for arest service)
 * page-size -  rows per page, default 10
 * page-number - page number from the beginning of a result set, default 1
-* order-by - order by expression, default 'id', if table or sp result set does not have 'id' column, no order by
+* order-by - specify a field the result set will be ordered by, default field is 'id' if the result set contains one, otherwise no "order by" clause will be applied
 * columns - comma separated list of the columns to return in a result set, default '*'
 * order-dir - direction of an 'order by' clause, default is 'desc'
 * distinct - if 'yes' distinct clause applies to query 
@@ -43,27 +43,17 @@ set for last entity in query or long binary column exactly defined in 'columns' 
   
   guid - value of 'xid' column
   
-	`<column name><logical operator><value>` - filter expression for entity. Supported logical operators: =, <, >, <=, >=, %= (sql 'like' operator)
-  
-<<<<<<< HEAD
-        <entity - n column name>`[`..]<entity column name> - user defined join condition. 
-        n - number of entity left in url then current.
+`<column name><logical operator><value>` - filter expression for entity. Supported logical operators: =, <, >, <=, >=, %= (sql 'like' operator) 
+        
+        
+`<entity - n column name>``[``..]<entity column name>` - user defined join condition. n - number of entity left in url then current.
   n equals count of ` between column names.
   
 * common filter expression: applies to all entity in the query which have column with name specified
   
-        <column name><logical operator><value> - Filters defined through variables applies to all entity in query which have column witn name = <column name>
-  Supported logical operators is =, <, >, <=, >=, in
-=======
-    `<entity - n column name>`` [``..]<entity column name>` - user defined join condition. n - number of entity left in url then current.
-  n equals count of ` between column names.
-  
-* common filter expression: applies to all entity in the query which have column with name specified
-* 
-  `<column name><logical operator><value>` - Filters defined through variables applies to all entity in the query which have a column witn name = <column name>
+`<column name><logical operator><value>` - Filters defined through variables applies to all entity in query which have column witn name = <column name>
   Supported logical operators is =, <, >, <=, >=, = `<list of comma separated values>` (sql 'in' operator)
->>>>>>> 'like' predicate
- 
+
 
 ### returns:
 

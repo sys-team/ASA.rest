@@ -223,13 +223,13 @@ begin
                                     (select list(d)
                                        from (select '[' + name + ']=' + value as d
                                                from #variable
-                                              where ar.isColumn(c_name, name, 1) = 1
+                                              where ar.isColumn(c_name, name, 1, 'sp') = 1
                                               union
                                              select predicate
                                                from #predicate
                                               where entityId = c_id
                                                 and predicate like '%=%'
-                                                and ar.isColumn(c_name, predicateColumn, 1) = 1) as t) + 
+                                                and ar.isColumn(c_name, predicateColumn, 1, 'sp') = 1) as t) + 
                                     ') as ' + c_alias;
         end case;
     
