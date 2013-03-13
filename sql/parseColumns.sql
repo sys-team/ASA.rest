@@ -54,7 +54,8 @@ begin
         
         if ar.columnDatatype(@entityId, c_column_name) = 'xml' then
             set @result = @result + '(select xmlagg(d) from openxml(xmlelement(''root'', ar.processXML(' +
-                                    c_column_name + ')), ''/*/*'') with(d xml ''@mp:xmltext''))' + ' as '+ c_column_name;
+                                    if @alias is not null then @alias + '.' else '' endif +
+                                    + '[' + c_column_name + '])), ''/*/*'') with(d xml ''@mp:xmltext''))' + ' as '+ c_column_name;
         else
             set @result = @result + if @alias is not null then @alias + '.' else '' endif + '[' + c_column_name + ']';
         end if;

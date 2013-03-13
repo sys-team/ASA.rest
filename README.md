@@ -28,8 +28,7 @@ When specifying an option as http-variable, a colon must be added to its name. (
 * columns - comma separated list of the columns to return in a result set, default '*'
 * order-dir - direction of an 'order by' clause, default is 'desc'
 * distinct - if 'yes' distinct clause applies to query 
-* long-values - if 'yes' shows long binary values in output. By default 'no' except then 'id' or 'xid' attribute
-set for last entity in query or long binary column exactly defined in 'columns' option
+* long-values - if 'yes', shows long binary values in the output. Default is 'no'. When 'id' or 'xid' attribute is set explicitly for the last entity in the query or a long binary column exactly defined in the 'columns' option
 
 
 ### url syntax

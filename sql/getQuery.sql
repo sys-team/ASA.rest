@@ -235,6 +235,12 @@ begin
     
         if c_id = 1 then
             set @from = @currentEntity;
+            
+            insert into #fk with auto name
+            select entityName,
+                   primaryColumn,
+                   foreignColumn
+              from ar.fkList(c_entityId);
         else
         
             delete from #fk;
