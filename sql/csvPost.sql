@@ -6,11 +6,13 @@ returns xml
 begin
     declare @result xml;
     declare @data long varchar;
+    declare @error long varchar;
     declare @entity long varchar;
     declare @entityId integer;
     declare @entityType long varchar;
     declare @parsedName long varchar;
     declare @sql long varchar;
+    declare @cnt integer;
     
     select entity
       into @entity 
@@ -39,6 +41,20 @@ begin
         return;
     end if;
     
+    -- csv check
+    set @cnt = length(@columns) - length(replace(@columns, ',' , ''));
+    
+    set @error = (select list(r)
+                    from (select length(s) - length(replace(s, ';','')) as c, rowid(t) as r
+                           from openstring(value @data)
+                                with(s long varchar) as t) as tt
+                   where c < @cnt);
+                   
+    if isnull(@error,'') <> '' then
+        raiserror 55555 'Unsufficient fields in lines %1! !', @error;
+        return;
+    end if;
+    
     set @columns = '[' + replace(@columns, ',', '],[') + ']';
     set @parsedName = ar.parseEntity(@entity);
     
@@ -55,11 +71,11 @@ begin
        set sqlText = @sql
      where xid = @xid;
      
-    message 'ar.csvPost @data = ', @data;
-    
     execute immediate @sql;   
     
-
+    set @cnt = @@rowcount;
+    
+    set @result = xmlelement('rows-accepted', @cnt);
 
     return @result;
 end

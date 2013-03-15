@@ -10,12 +10,15 @@ begin
     declare @errorCode long varchar;
     declare @action long varchar;
     declare @roles xml;
+    declare @cts datetime;
     
     declare local temporary table #variable(
         name long varchar,
         value long varchar,
         operator varchar(64) default '='
     );
+    
+    set @cts = now();
     
     if varexists('@xid') = 0 then create variable @xid GUID end if;
 
@@ -37,7 +40,7 @@ begin
       from util.httpVariables();
       
     update ar.log 
-      set variables = (select list(name +'='+value, '&') from #variable)
+      set variables = (select list(name +'='+value, '&') from #variable where name = 'columns:')
      where xid = @xid;
      
     
@@ -59,13 +62,23 @@ begin
             when 'post' then
                 set @response = ar.csvPost(@url);
         end case;
-     
-    end if; 
+        
+
+    end if;
+    
+    set @response = xmlelement('response', xmlattributes('https://github.com/sys-team/ASA.rest' as "xmlns",
+                                             @xid as "xid",
+                                             now() as "ts",
+                                             @cts as "cts",
+                                             @@servername as "servername",
+                                             db_name() as "dbname",
+                                             property('machinename') as "host"), @response);
+
     ----------
     update ar.log
        set response = @response
      where xid = @xid;
-
+     
     return @response;
     
     exception  
