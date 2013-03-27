@@ -58,9 +58,10 @@ When specifying an option as http-variable, a colon must be added to its name. (
 
 xml with rows of last entity in query
 
+### examples
 
-    url: ../rest/get/dbo.someTable//dbo.someTable2/10?page-size:=1&page-number:=5
-    
+#### response xml example
+
     <response xmlns="https://github.com/sys-team/ASA.rest" xid="0000" ts="2013-01-30 15:30:08.919"
       cts="2013-01-30 15:30:08.716" servername="SERVER" dbname="database" host="HOST">
         <d name="dbo.someTable2" xid="0000">
@@ -69,6 +70,62 @@ xml with rows of last entity in query
             <datetime name="ts">2009-04-29 15:40:29.733</datetime>
         </d>
     </response>
+
+#### select from two tables with join and id column restriction 
+
+* url: `../rest/get/dbo.someTable//dbo.someTable2/10?page-size:=1&page-number:=5`
+
+* probable sql (depends on specific data model): 
+
+	select t2.filed1 … t2.fieldN
+	from dbo.someTable t1 join dbo.someTable t2 on t1.PK = t2.fk
+	where t2.id = 10
+	order by t2.id desc
+	 
+#### select from one table with predicates
+
+* url: `../rest/get/dbo.someTable/field1>=100&field2%=cat%&field3=1
+* probabale sql:
+
+        select t1.filed1 … t1.fieldN
+        from dbo.someTable t1
+        where t1.field1 >= 100
+        and t1.field2 like 'cat%'
+        and t1.field3 = 1
+        order by t1.id desc
+ 
+#### select from one table with xid restriction
+
+* url: `../rest/get/dbo.someTable/17dd84a7-e99b-4d42-a153-a5f9d0454388
+
+* probable sql:
+
+        select t1.filed1 … t1.fieldN
+        from dbo.someTable t1
+        where t1.xid = '17dd84a7-e99b-4d42-a153-a5f9d0454388'
+
+#### select with predicates, variables and custom join condition
+
+* url: `../rest/get/dbo.someTable/field3``fileld4/dbo.someTable2/field1=1?date>2013-01-01`
+
+* probable sql:
+
+        select t2.filed1 … t2.fieldN
+        from dbo.someTable t1, dbo.someTable2 t2
+        where t1.field3 = t2.field4
+        and t2.field1 = 1
+        and t1.date > '2013-01-01'
+        and t2.date > '2013-01-01'
+
+
+
+
+
+
+
+
+    
+
 
 
 

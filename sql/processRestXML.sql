@@ -1,4 +1,4 @@
-create or replace procedure dbo.processRestXML(@xml xml)
+create or replace procedure dbo.processRestXML(@data xml)
 begin
 
     declare @currentData xml;

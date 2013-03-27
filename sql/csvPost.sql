@@ -42,6 +42,7 @@ begin
     end if;
     
     -- csv check
+    --message 'ar.csvPost csv check start';
     set @cnt = length(@columns) - length(replace(@columns, ',' , ''));
     
     set @error = (select list(r)
@@ -54,6 +55,7 @@ begin
         raiserror 55555 'Unsufficient fields in lines %1! !', @error;
         return;
     end if;
+    --message 'ar.csvPost csv check end';
     
     set @columns = '[' + replace(@columns, ',', '],[') + ']';
     set @parsedName = ar.parseEntity(@entity);
@@ -71,7 +73,9 @@ begin
        set sqlText = @sql
      where xid = @xid;
      
-    execute immediate @sql;   
+    --message 'ar.csvPost execute immediate start';
+    execute immediate with result set off @sql;
+    --message 'ar.csvPost execute immediate end';
     
     set @cnt = @@rowcount;
     
