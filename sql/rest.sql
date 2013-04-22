@@ -3,7 +3,8 @@ create or replace function ar.rest(
     @authType long varchar default 'basic',
     @code long varchar default isnull(nullif(replace(http_header('Authorization'), 'Bearer ', ''),''), http_variable('authorization:')),
     @pageSize integer default coalesce(nullif(http_header('page-size'),''), http_variable('page-size:'),10),
-    @pageNumber integer default coalesce(nullif(http_header('page-number'),''), http_variable('page-number:'),1)
+    @pageNumber integer default coalesce(nullif(http_header('page-number'),''), http_variable('page-number:'),1),
+    @isolationLevel long varchar default coalesce(nullif(http_header('isolation-level'),''), http_variable('isolation-level:'), '1')
 )
 returns xml
 begin
@@ -66,6 +67,19 @@ begin
            entityType
       into @entityId, @entityType
       from ar.entityIdAndType(@entity);
+      
+    -- isolation level set
+    --message 'ar.rest @isolationLevel = ', @isolationLevel;
+    case @isolationLevel
+        when '0' then
+            set temporary option isolation_level = 0;
+        when '1' then
+            set temporary option isolation_level = 1;
+        when '2' then
+            set temporary option isolation_level = 2;
+        when '3' then
+            set temporary option isolation_level = 3;
+    end case;
            
     -- check @roles
     if not exists(select *
