@@ -45,7 +45,7 @@ begin
     if varexists('@isDba') = 0 then create variable @isDba integer end if;
     
     if @authType <> 'basic' then
-        set @roles = util.UOAuthAuthorize(@code);
+        set @roles = uac.UOAuthAuthorize(@code);
     end if;
     
     -- http variables
