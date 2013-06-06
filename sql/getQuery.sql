@@ -114,7 +114,8 @@ begin
                                            list(data, '&') as data
                                       from openxml(@roles,'/*:response/*:roles/*:role')
                                             with(code long varchar '*:code', data long varchar '*:data')
-                                     group by code) as roles on roles.code = #entity.name;
+                                     group by code) as roles on (roles.code = #entity.name
+                                                               or #entity.name regexp '^' + roles.code + '\..+');
       
     -- error
     set @error = (select list(name)
