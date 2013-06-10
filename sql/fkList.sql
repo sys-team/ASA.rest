@@ -1,4 +1,7 @@
-create or replace procedure ar.fkList(@tableId integer)
+create or replace procedure ar.fkList(
+    @tableId integer,
+    @entity long varchar default null
+)
 begin
 
     select distinct
@@ -11,7 +14,14 @@ begin
                           join sys.sysidxcol ic on ic.table_id  =i.table_id and ic.index_id = i.index_id
                           join sys.syscolumn fcol on fcol.table_id = fk.foreign_table_id and fcol.column_id = ic.column_id
                           join sys.syscolumn pcol on pcol.table_id = fk.primary_table_id and pcol.column_id = ic.primary_column_id
-     where fk.foreign_table_id = @tableId;
+     where fk.foreign_table_id = @tableId
+     union
+     select distinct
+            actor,
+            'xid',
+            name
+       from ch.entityRole
+      where entity = @entity;
      
 end
 ;

@@ -243,7 +243,7 @@ begin
             select entityName,
                    primaryColumn,
                    foreignColumn
-              from ar.fkList(c_entityId);
+              from ar.fkList(c_entityId, c_name);
         else
         
             delete from #fk;
@@ -253,13 +253,13 @@ begin
             select entityName,
                    primaryColumn,
                    foreignColumn
-              from ar.fkList(c_entityId);
+              from ar.fkList(c_entityId, c_name);
               
             insert into #fk1 with auto name
             select entityName,
                    primaryColumn,
                    foreignColumn
-              from ar.fkList(@prevEntityId);
+              from ar.fkList(@prevEntityId, c_name);
         
             set @from  = @from + 
                         coalesce((select top 1
