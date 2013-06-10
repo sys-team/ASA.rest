@@ -111,11 +111,13 @@ begin
            rawPermPredicate = roles.data
       from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name)) as l
                    left outer join (select code,
-                                           list(data, '&') as data
+                                           '|' + list(data, '|') + '|' as data
                                       from openxml(@roles,'/*:response/*:roles/*:role')
                                             with(code long varchar '*:code', data long varchar '*:data')
                                      group by code) as roles on (roles.code = #entity.name
-                                                               or #entity.name regexp '^' + roles.code + '\..+');
+                                                               or #entity.name regexp '^' + roles.code + '\..+'
+                                                               or (locate(roles.data, '|' + #entity.name +'|') <> 0
+                                                              and roles.code = 'arest.read.' + @@servername + '.' + db_name()));
       
     -- error
     set @error = (select list(name)
