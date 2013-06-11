@@ -46,6 +46,8 @@ begin
     
     if @authType <> 'basic' then
         set @roles = uac.UOAuthAuthorize(@code);
+        if varexists('@UOAuthAccessToken') = 0 then create variable @UOAuthAccessToken long varchar end if;
+        set @UOAuthAccessToken = @code;
     end if;
     
     -- http variables
