@@ -1,10 +1,10 @@
 create or replace procedure ar.entityIdAndType(
-    @entityName long varchar,
-    @desiredType long varchar default null
+    @entityName STRING,
+    @desiredType STRING default null
 )
 begin
     declare @entityId integer;
-    declare @entityType long varchar;
+    declare @entityType STRING;
     
     set @entityId = (select id
                        from ar.collection

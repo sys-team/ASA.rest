@@ -18,7 +18,7 @@ begin
      union
      select distinct
             actor,
-            'xid',
+            'id',
             name
        from ch.entityRole
       where entity = @entity;

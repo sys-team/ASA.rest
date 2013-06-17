@@ -100,16 +100,20 @@ begin
            option(delimited by '/' row delimited by '~') as t
      where name like '%.%';
         
-    --set @result = (select * from #entity for xml raw, elements);
-    --return @result;
-      
+    -- data sources    
+    update #entity
+       set name = ds.dataSource,
+           entityType = ds.type
+      from #entity e join ch.dataSource ds on e.name = ds.entity
+     where ds.dataSource is not null;
+
     update #entity
        set entityId = l.entityId,
-           entityType = l.entityType,
+           entityType = isnull(#entity.entityType, l.entityType),
            parsedName = ar.parseEntity(name),
            alias = 't' + cast(id as varchar(24)),
            rawPermPredicate = roles.data
-      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name)) as l
+      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name, #entity.entityType)) as l
                    left outer join (select code,
                                            '|' + list(data, '|') + '|' as data
                                       from openxml(@roles,'/*:response/*:roles/*:role')
