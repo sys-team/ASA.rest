@@ -1,7 +1,7 @@
 create or replace function ar.news(
     @url STRING,
     @domain STRING default http_variable('domain:'),
-    @sts STRING default http_variable('ts:'),
+    @offset STRING default http_variable('offset:'),
     @pageSize integer default coalesce(nullif(http_header('page-size'),''), http_variable('page-size:'),10)
 )
 returns xml
@@ -18,7 +18,7 @@ begin
         xid GUID
     );
     
-    set @ts = isnull(util.tsFromOffset(@sts), today());
+    set @ts = isnull(util.tsFromOffset(@offset), today());
     
     for lloop as ccur cursor for
     select property as c_entity
@@ -32,7 +32,8 @@ begin
             set @sql = 'insert into #news with auto name ' +
                        'select top ' + cast(@pageSize as varchar(24)) + ' c_entity as entity, '+
                        'ts, xid from ' + ar.parseEntity(c_entity) +
-                       ' where ts >= ''' + cast(@ts as varchar(24)) +''' ' +
+                       if @entityType = 'sp' then '() ' else ' ' endif +
+                       'where ts >= ''' + cast(@ts as varchar(24)) +''' ' +
                        'order by ts';
                       
             execute immediate @sql;
@@ -61,13 +62,13 @@ begin
     
     end for;
     
-    set @newsNextTs = isnull((select top 1 start at (@pageSize + 1)
-                                     util.offsetFromTs(ts)
-                                from #news
-                               order by ts),
-                              (select util.offsetFromTs(max(ts))
-                                 from #news));
-    
+    set @newsNextOffset = isnull((select top 1 start at (@pageSize + 1)
+                                         util.offsetFromTs(ts)
+                                    from #news
+                                   order by ts),
+                                 (select util.offsetFromTs(max(ts))
+                                    from #news));
+         
     return @result;
 end
 ;

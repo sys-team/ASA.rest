@@ -63,7 +63,7 @@ begin
     -- entity id & entity type       
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
     if varexists('@entityType') = 0 then create variable @entityType varchar(128) end if;
-    if varexists('@newsNextTs') = 0 then create variable @newsNextTs varchar(128) end if;    
+    if varexists('@newsNextOffset') = 0 then create variable @newsNextOffset varchar(128) end if;    
     
     select entityId,
            entityType
@@ -133,7 +133,7 @@ begin
                                                          @@servername as "servername",
                                                          db_name() as "dbname",
                                                          property('machinename') as "host",
-                                                         @newsNextTs as "news-next-ts"),
+                                                         @newsNextOffset as "news-next-offset"),
                                            @response);
     
     set @maxLogLength = 65536;
