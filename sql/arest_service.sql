@@ -1,4 +1,4 @@
-sa_make_object 'service', 'arest'
+call sa_make_object('service', 'arest')
 ;
 alter service arest
 TYPE 'RAW' 
