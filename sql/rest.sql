@@ -63,7 +63,7 @@ begin
     -- entity id & entity type       
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
     if varexists('@entityType') = 0 then create variable @entityType varchar(128) end if;
-    
+    if varexists('@newsNextTs') = 0 then create variable @newsNextTs varchar(128) end if;    
     
     select entityId,
            entityType
@@ -104,7 +104,9 @@ begin
            
         case @action
             when 'get' then
-                set @response = ar.get(@url);
+                set @response = ar.getQuery(@url);
+            when 'news' then
+                set @response = ar.news(@url);
             when 'put' then
                 set @response = ar.put(@url);
             when 'make' then
@@ -130,7 +132,9 @@ begin
                                                          @rowcount as "page-row-count",
                                                          @@servername as "servername",
                                                          db_name() as "dbname",
-                                                         property('machinename') as "host"), @response);
+                                                         property('machinename') as "host",
+                                                         @newsNextTs as "news-next-ts"),
+                                           @response);
     
     set @maxLogLength = 65536;
                                                          
