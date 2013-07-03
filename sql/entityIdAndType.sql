@@ -6,6 +6,12 @@ begin
     declare @entityId integer;
     declare @entityType STRING;
     
+    if @desiredType is null then
+        set @desiredType = (select type
+                              from ch.dataSource
+                             where entity = @entityName);
+    end if;
+    
     set @entityId = (select id
                        from ar.collection
                       where name = @entityName

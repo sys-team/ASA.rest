@@ -62,12 +62,15 @@ begin
     
     end for;
     
-    set @newsNextOffset = isnull((select top 1 start at (@pageSize + 1)
-                                         util.offsetFromTs(ts)
-                                    from #news
-                                   order by ts),
-                                 (select util.offsetFromTs(max(ts))
-                                    from #news));
+    set @newsNextOffset = coalesce((select top 1 start at (@pageSize + 1)
+                                           util.offsetFromTs(ts)
+                                      from #news
+                                    order by ts),
+                                   (select util.offsetFromTs(max(ts))
+                                      from #news),
+                                   util.offsetFromTs(@ts));
+                                   
+    --message 'ar.news @newsNextOffset = ', @newsNextOffset;
          
     return @result;
 end
