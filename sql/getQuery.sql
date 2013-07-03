@@ -112,16 +112,9 @@ begin
            entityType = isnull(#entity.entityType, l.entityType),
            parsedName = ar.parseEntity(name),
            alias = 't' + cast(id as varchar(24)),
-           rawPermPredicate = roles.data
-      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name, #entity.entityType)) as l
-                   left outer join (select code,
-                                           '|' + list(data, '|') + '|' as data
-                                      from openxml(@roles,'/*:response/*:roles/*:role')
-                                            with(code long varchar '*:code', data long varchar '*:data')
-                                     group by code) as roles on (roles.code = #entity.name
-                                                               or #entity.name regexp '^' + roles.code + '\..+'
-                                                               or (locate(roles.data, '|' + #entity.name +'|') <> 0
-                                                              and roles.code = 'arest.read.' + @@servername + '.' + db_name()));
+           rawPermPredicate = if ar.entityPermission(regexp_substr(#entity.name, '^[^\.]+'),
+                                                     regexp_substr(#entity.name,'(?<=\.).+')) = 1 then 'R' else null endif
+      from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name, #entity.entityType)) as l;
       
     -- error
     set @error = (select list(name)
@@ -190,7 +183,8 @@ begin
     
     if exists(select *
                 from ar.entityIdAndType('dbo.extra')
-               where entityId is not null) and ar.isColumn(@entity, 'id') = 1
+               where entityId is not null)
+      and ar.isColumn(@entity, 'id') = 1
       and ar.columnDatatype(@entityId, 'id') in  ('integer','bigint') then
        
         set @extra = '(select xmlagg(xmlelement(''extra'', xmlattributes(et.code as "name"), e.value)) '+
