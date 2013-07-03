@@ -18,6 +18,10 @@ begin
         xid GUID
     );
     
+    if @domain is null then
+        set @domain = regexp_substr(@url,'(?<=/)[^/]+');
+    end if;
+        
     set @ts = isnull(util.tsFromOffset(@offset), today());
     
     for lloop as ccur cursor for
