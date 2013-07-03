@@ -76,7 +76,7 @@ begin
         foreignColumn long varchar
     );
 
-    call ar.parseVariables();
+    --call ar.parseVariables();
     
     -- parse url
     set @url = substr(@url, locate(@url,'/') +1);

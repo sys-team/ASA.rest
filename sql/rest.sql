@@ -102,6 +102,8 @@ begin
             set @isDba = 1;
         end if;
            
+        call ar.parseVariables();
+        
         case @action
             when 'get' then
                 set @response = ar.getQuery(@url);
