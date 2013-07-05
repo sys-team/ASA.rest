@@ -356,7 +356,7 @@ begin
     --message 'ar.getQuery @sql = ', @sql;
     
     update ar.log
-       set sqlText = @sql
+       set sqlText = if sqlText is not null then sqlText + '; ' else '' endif + @sql
      where xid = @xid;
     
     set @sql = 'set @rawData = (' + @sql +')';
