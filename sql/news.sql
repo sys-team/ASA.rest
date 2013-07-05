@@ -29,9 +29,12 @@ begin
       from ch.entityProperty
      where entity = @domain
     do
+        
         set @entityType = (select entityType
                              from ar.entityIdAndType(c_entity));
-    
+                             
+        --message 'ar.news c_entity = ', c_entity, ' @entityType = ', @entityType;
+        
         if @entityType is not null then
             set @sql = 'insert into #news with auto name ' +
                        'select top ' + cast(@pageSize as varchar(24)) + ' c_entity as entity, '+
@@ -39,7 +42,7 @@ begin
                        if @entityType = 'sp' then '() ' else ' ' endif +
                        'where ts >= ''' + cast(@ts as varchar(24)) +''' ' +
                        'order by ts';
-                      
+            --message 'ar.news @sql = ', @sql;
             execute immediate @sql;
         end if;
     

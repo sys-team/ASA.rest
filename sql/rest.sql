@@ -59,6 +59,8 @@ begin
     update ar.log 
       set variables = (select list(name +'='+value, '&') from #variable)
      where xid = @xid;
+     
+
       
     -- entity id & entity type       
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
@@ -82,9 +84,18 @@ begin
         when '3' then
             set temporary option isolation_level = 3;
     end case;
+    
+    -- forbidden chars
+    if exists (select *
+                 from #variable
+                where ar.checkForbiddenChars(name) = 1
+                   or ar.checkForbiddenChars(value) = 1)
+       or ar.checkForbiddenChars(@url) = 1 then
+       
+        set @response = xmlelement('error', 'Forbidden chracter detected');
            
     -- check @roles
-    if not exists(select *
+    elseif not exists(select *
                     from openxml(@roles,'/*:response/*:roles/*:role')
                          with(code long varchar '*:code')
                    where code = 'authenticated') and @authType <> 'basic' then
