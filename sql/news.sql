@@ -40,7 +40,7 @@ begin
                        'select top ' + cast(@pageSize as varchar(24)) + ' c_entity as entity, '+
                        'ts, xid from ' + ar.parseEntity(c_entity) +
                        if @entityType = 'sp' then '() ' else ' ' endif +
-                       'where ts >= ''' + cast(@ts as varchar(24)) +''' ' +
+                       'where ts > ''' + cast(@ts as varchar(24)) +''' ' +
                        'order by ts';
             --message 'ar.news @sql = ', @sql;
             execute immediate @sql;
@@ -69,7 +69,7 @@ begin
     
     end for;
     
-    set @newsNextOffset = coalesce((select top 1 start at (@pageSize + 1)
+    set @newsNextOffset = coalesce((select top 1 start at (@pageSize)
                                            util.offsetFromTs(ts)
                                       from #news
                                     order by ts),
