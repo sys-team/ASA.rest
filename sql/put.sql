@@ -140,7 +140,7 @@ begin
         set @sql = 'insert into [' + left(@entity, locate(@entity,'.') -1) + '].[' + substr(@entity, locate(@entity,'.') +1) +'] '+
                    ' on existing update with auto name '+
                    ' select ' +
-                   (select list(''''+value+''' as [' + name + ']')
+                   (select list(value + ' as [' + name + ']')
                       from #variable
                      where name <> 'url'
                        and name not like '%:'
@@ -153,7 +153,7 @@ begin
                         if @recordId is null then ' null' else ' ''' + cast(@recordId as varchar(24)) + '''' end if + ' as id '
                       else '' endif;
                     
-       --message 'ar.put @sql = ', @sql;
+        --message 'ar.put @sql = ', @sql;
                     
         execute immediate @sql;
         
