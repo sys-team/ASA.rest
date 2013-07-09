@@ -48,6 +48,14 @@ begin
     
     end for;
     
+    -- delete duplicate xid's
+    delete from #news
+    where exists (select *
+                    from #news n
+                   where n.entity = #news.entity
+                     and n.xid = #news.xid
+                     and n.ts > #news.ts);
+    
     for lloop2 as ccur2 cursor for
     select top @pageSize
            entity as c_entity,
@@ -75,7 +83,7 @@ begin
                                     order by ts),
                                    (select util.offsetFromTs(max(ts))
                                       from #news),
-                                   util.offsetFromTs(@ts));
+                                   util.offsetFromTs(dateadd(millisecond,1,@ts)));
                                    
     --message 'ar.news @newsNextOffset = ', @newsNextOffset;
          
