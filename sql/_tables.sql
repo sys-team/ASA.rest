@@ -46,4 +46,15 @@ create table if not exists ar.element(
 comment on table ar.element is 'Элемент'
 ;
 
+create table if not exists ar.testData(
+
+    domain STRING not null unique,
+    data xml,
+
+    id ID, xid GUID, ts TS, cts CTS,
+    unique (xid), primary key (id)
+)
+;
+comment on table ar.testData is 'Тестовые данные'
+;
 

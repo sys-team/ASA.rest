@@ -120,6 +120,8 @@ begin
                 set @response = ar.getQuery(@url);
             when 'news' then
                 set @response = ar.news(@url);
+            when 'testData' then
+                set @response = ar.testData(@url);
             when 'put' then
                 set @response = ar.put(@url);
             when 'make' then
