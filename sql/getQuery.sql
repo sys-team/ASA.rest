@@ -361,7 +361,10 @@ begin
     
     set @sql = 'set @rawData = (' + @sql +')';
     
-    execute immediate @sql; 
+    execute immediate @sql;
+    
+    --message 'ar.getQuery @rawData = ', @rawData;
+    set @rawData = ar.chestToRawData(@entity,@rawData);
 
     set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);    
     
