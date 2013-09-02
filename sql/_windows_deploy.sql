@@ -1,6 +1,9 @@
 read c:\\sites\\ASA.rest\\sql\\_tables.sql;
 read c:\\sites\\ASA.rest\\sql\\addElement.sql;
 read c:\\sites\\ASA.rest\\sql\\arest_service.sql;
+read c:\\sites\\ASA.rest\\sql\\checkForbiddenChars.sql;
+read c:\\sites\\ASA.rest\\sql\\chestToRawData.sql;
+read c:\\sites\\ASA.rest\\sql\\entityPermission.sql;
 read c:\\sites\\ASA.rest\\sql\\columnDatatype.sql;
 read c:\\sites\\ASA.rest\\sql\\csv.sql;
 read c:\\sites\\ASA.rest\\sql\\csv_service.sql;
