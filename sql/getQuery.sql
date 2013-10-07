@@ -6,7 +6,8 @@ create or replace function ar.getQuery(
     @columns long varchar default coalesce(nullif(http_header('columns'),''),http_variable('columns:')),
     @orderDir long varchar default coalesce(nullif(http_header('order-dir'),''),http_variable('order-dir:')),
     @distinct long varchar default coalesce(nullif(http_header('distinct'),''),http_variable('distinct:')),
-    @longValues long varchar default coalesce(nullif(http_header('long-values'),''),http_variable('long-values:'))    
+    @longValues long varchar default coalesce(nullif(http_header('long-values'),''),http_variable('long-values:')),
+    @showNulls long varchar default coalesce(nullif(http_header('show-nulls'),''),http_variable('show-nulls:'))
 )
 returns xml
 begin
@@ -361,7 +362,15 @@ begin
     
     set @sql = 'set @rawData = (' + @sql +')';
     
+    if @showNulls = 'yes' then
+        set temporary option for_xml_null_treatment  = 'Empty';
+    end if;
+    
     execute immediate @sql;
+    
+    if @showNulls = 'yes' then
+        set temporary option for_xml_null_treatment  = 'Omit';
+    end if;
     
     --message 'ar.getQuery @rawData = ', @rawData;
     set @rawData = ar.chestToRawData(@entity,@rawData);
