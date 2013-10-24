@@ -42,20 +42,22 @@ begin
                ed.xmlData
           from openxml(xmlelement('root', @rawData), '/root/row')
                with(xid STRING 'xid', ts STRING 'ts', xmlData xml '@mp:xmltext') as t 
-               join ch.entity e on e.xid = t.xid and e.ts > t.ts
+               join ch.entity e on e.xid = t.xid 
                outer apply (select *
                               from openxml(e.xmlData,'/d/*')
                                    with (
                                         name STRING '@name',
                                         data STRING '.',
                                         xmlData xml '*/@mp:xmltext'
-                                        )) as ed;
+                                        )
+                             where data is not null) as ed
+         where e.ts > cast(t.ts as datetime);
                         
         set @result = (
             select xmlagg(r)
             from (select xmlelement('row',xmlagg(xmlelement(name, data))) as r
-             from #parsed
-            group by xid) as t
+                    from #parsed
+                   group by xid) as t
             )
                                  
     else                 

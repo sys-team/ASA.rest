@@ -12,6 +12,10 @@ begin
                              where entity = @entityName);
     end if;
     
+    if @desiredType is null then
+        set @desiredType = util.getUserOption( 'ch.preferedEntityType');
+    end if;
+    
     set @entityId = (select id
                        from ar.collection
                       where name = @entityName

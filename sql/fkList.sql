@@ -16,12 +16,20 @@ begin
                           join sys.syscolumn pcol on pcol.table_id = fk.primary_table_id and pcol.column_id = ic.primary_column_id
      where fk.foreign_table_id = @tableId
      union
-     select distinct
-            actor,
-            'id',
-            name
-       from ch.entityRole
-      where entity = @entity;
+    select distinct
+           actor,
+           'id',
+           name
+      from ch.entityRole
+     where entity = @entity
+     union
+    select distinct
+           'ch.' + actor,
+           'id',
+           name
+      from ch.entityRole
+     where entity = substr(@entity, 4)    
+       and @entity like 'ch.%';
      
 end
 ;
