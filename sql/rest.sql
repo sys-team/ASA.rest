@@ -100,7 +100,8 @@ begin
                          with(code long varchar '*:code')
                    where code = 'authenticated') and @authType <> 'basic' then
                    
-        set @response = xmlelement('error', 'Not authenticated');
+        set @response = xmlelement('error', 'Not authorized');
+        CALL dbo.sa_set_http_header( '@HttpStatus', '403' );
     else
         -- DBA authority check
         if @authType <> 'basic' then
