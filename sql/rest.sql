@@ -110,6 +110,10 @@ begin
                                  with(code long varchar '*:code', data long varchar '*:data')
                            where code = @@servername + '.' + db_name()
                              and data = 'dba');
+                             
+            if isnull(util.getUserOption('uac.emailAuth'),'0') = '1' then
+                set @isDba = 1;
+            end if;    
         else
             set @isDba = 1;
         end if;
