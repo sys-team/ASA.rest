@@ -160,6 +160,7 @@ begin
             db_name() as "dbname",
             property('machinename') as "host",
             @newsNextOffset as "news-next-offset",
+            @entity as "entity-name"
         ),
         @response
     );
