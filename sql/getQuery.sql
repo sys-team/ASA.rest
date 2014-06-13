@@ -7,7 +7,8 @@ create or replace function ar.getQuery(
     @orderDir long varchar default coalesce(nullif(http_header('order-dir'),''),http_variable('order-dir:')),
     @distinct long varchar default coalesce(nullif(http_header('distinct'),''),http_variable('distinct:')),
     @longValues long varchar default coalesce(nullif(http_header('long-values'),''),http_variable('long-values:')),
-    @showNulls long varchar default coalesce(nullif(http_header('show-nulls'),''),http_variable('show-nulls:'))
+    @showNulls long varchar default coalesce(nullif(http_header('show-nulls'),''),http_variable('show-nulls:')),
+    @ETag STRING default util.HTTPVariableOrHeader ('if-none-match')
 )
 returns xml
 begin
@@ -158,29 +159,37 @@ begin
         set @orderDir = 'desc';
     end if;
     
+    if @ETag is not null then
+        set @orderBy = 'left(ts,23) asc, id asc';
+        set @orderDir = '';
+    end if;
+    
     -- columns
     if @columns is null then
         set @columns = '*';
     end if;
     
     -- If one record by key then @longValues = yes
-    if exists(select *
-                from (select name
-                        from #variable
-                       union
-                      select predicateColumn
-                        from #predicate
-                       where entityId = @id) as t
-              where name in (select top (1)
-                                    column_name
-                               from ar.pkList('', @entityId)
-                              union
-                             select 'xid')) then
-                                                                  
+    if exists (
+            select * from (
+                select name
+                    from #variable
+                union select predicateColumn
+                    from #predicate
+                    where entityId = @id
+            ) as t
+            where name in (
+                select top (1) column_name
+                    from ar.pkList('', @entityId)
+                union select 'xid'
+            )
+    ) then
         set @longValues = 'yes';
     end if;
     
-    set @columns = ar.parseColumns(@entityId, @columns, @entityAlias, @entityType, if @longValues = 'yes' then 1 else 0 endif);
+    set @columns = ar.parseColumns(
+        @entityId, @columns, @entityAlias, @entityType, if @longValues = 'yes' then 1 else 0 endif
+    );
     
     if exists(select *
                 from ar.entityIdAndType('dbo.extra')
@@ -221,18 +230,19 @@ begin
             when 'table' then
                 set @currentEntity = c_parsedName + ' as ' + c_alias;
             when 'sp' then
-                set @currentEntity = c_parsedName + '(' +
-                                    (select list(d)
-                                       from (select '[' + name + ']=' + value as d
-                                               from #variable
-                                              where ar.isColumn(c_name, name, 1, 'sp') = 1
-                                              union
-                                             select predicate
-                                               from #predicate
-                                              where entityId = c_id
-                                                and predicate like '%=%'
-                                                and ar.isColumn(c_name, predicateColumn, 1, 'sp') = 1) as t) + 
-                                    ') as ' + c_alias;
+                set @currentEntity = c_parsedName + '(' + (
+                        select list(d)
+                        from (
+                            select '[' + name + ']=' + value as d
+                                from #variable
+                                where ar.isColumn(c_name, name, 1, 'sp') = 1
+                            union select predicate
+                                from #predicate
+                                where entityId = c_id
+                                    and predicate like '%=%'
+                                    and ar.isColumn(c_name, predicateColumn, 1, 'sp') = 1) as t
+                    ) + ') as ' + c_alias
+                ;
         end case;
     
         if c_id = 1 then
@@ -318,41 +328,69 @@ begin
     
     end for;
     
-    set @sql = 'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
-               ' top ' + cast(@pageSize as varchar(64)) + ' ' +
-               ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-               ' ' + @columns +
-               if @extra is not null then ',' + @extra else '' endif + ' ';
-               
-    set @whereJoin = (select list(p.alias +'.[' + j.parentColumn + '] = ' + c.alias + '.[' + j.childColumn + ']', ' and ')
-                        from #joins j join #entity p on j.parent = p.id
-                                      join #entity c on j.child = c.id);
-                                      
-    set @where = (select list(e.alias + '.[' + v.name + ']' + v.operator + ' ' + v.value, ' and ')
-                    from #variable v, #entity e
-                   where v.name <> 'url'
-                     and v.name not like '%:'
-                     and ar.isColumn(e.name, v.name) = 1);
-                     
-    set @where2 = (select list(e.alias + '.' + p.predicate, ' and ')
-                     from #entity e join #predicate p on e.id = p.entityId
-                    where (p.predicate like '%=%'
-                       or p.predicate like '%<%'
-                       or p.predicate like '%>%'
-                       or p.predicate like '%like%')
-                      and ar.isColumn(e.name, p.predicateColumn) = 1 );
-                      
-    set @where = (select list(d, ' and ') as li
-                    from (select @whereJoin as d union select @where union select @where2) as t
-                   where isnull(d, '') <> '');
-                      
+    set @sql =
+        'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
+        ' top ' + cast(@pageSize as varchar(64)) + ' ' +
+        ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
+        ' ' + @columns +
+        if @extra is not null then ',' + @extra else '' endif + ' '
+    ;
+    
+    set @whereJoin = (
+        select list(p.alias +'.[' + j.parentColumn + '] = ' + c.alias + '.[' + j.childColumn + ']', ' and ')
+        from #joins j
+            join #entity p on j.parent = p.id
+            join #entity c on j.child = c.id
+    );
+    
+    set @where = (
+        select list(e.alias + '.[' + v.name + ']' + v.operator + ' ' + v.value, ' and ')
+        from #variable v, #entity e
+        where v.name <> 'url'
+           and v.name not like '%:'
+           and ar.isColumn(e.name, v.name) = 1
+    );
+    
+    set @where2 = (
+        select list(e.alias + '.' + p.predicate, ' and ')
+        from #entity e join #predicate p on e.id = p.entityId
+        where (p.predicate like '%=%'
+                or p.predicate like '%<%'
+                or p.predicate like '%>%'
+                or p.predicate like '%like%'
+            )
+            and ar.isColumn(e.name, p.predicateColumn) = 1
+    );
+    
+    set @where = (
+        select list(d, ' and ') as li
+        from (
+            select @whereJoin as d
+            union select @where
+            union select @where2
+            union select string (
+                'ts > ''', ar.tsFromETag(@ETag), '''',
+                ' and (id > ', ar.idFromETag(@ETag),
+                ' or ts > ''', dateadd(ms,1,ar.tsFromETag(@ETag)), '''',
+                ')'
+            ) where length(@ETag) > 3
+        ) as t
+        where isnull(d, '') <> ''
+    );
+    
     set @sql = @sql + 'from ' + @from + 
-               if @where <> '' then ' where ' else '' endif + @where +
-               if @orderBy is not null
-                  and (@distinct <> 'yes' or locate(@columns, '[' + @orderBy + ']') <> 0) then
-                    ' order by ' + @entityAlias + '.' + @orderBy + ' ' + @orderDir
-                else '' endif +
-               ' for xml raw, elements';
+        if @where <> '' then ' where ' else '' endif + @where +
+        if @orderBy is not null
+           and (@ETag is not null or @distinct <> 'yes' or locate(@columns, '[' + @orderBy + ']') <> 0)
+        then
+            string (
+                ' order by ',
+                if @ETag is null then @entityAlias + '.' endif,
+                @orderBy, ' ', @orderDir
+            )
+        else '' endif +
+        ' for xml raw, elements'
+    ;
     
     --message 'ar.getQuery @sql = ', @sql;
     

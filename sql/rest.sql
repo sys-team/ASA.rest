@@ -141,30 +141,37 @@ begin
 
     end if; 
     
-    set @rowcount = (
-        select count(*)
-        from openxml(xmlelement('root',@response), '/root/d')
-            with(name long varchar '@name')
-    );
-    
-    set @response = xmlelement('response',
-        xmlattributes(
-            'https://github.com/sys-team/ASA.rest' as "xmlns",
-            @xid as "xid",
-            now() as "ts",
-            @cts as "cts",
-            @pageSize as "page-size",
-            @pageNumber as "page-number",
-            @rowcount as "page-row-count",
-            @@servername as "servername",
-            db_name() as "dbname",
-            property('machinename') as "host",
-            @newsNextOffset as "news-next-offset",
-            @entity as "entity-name"
-        ),
+    with xmldataset as (
+        select * from openxml(xmlelement('root',@response), '/root/d') with(
+            id BIGINT '*[@name="id"]', ts timestamp '*[@name="ts"]'
+        )
+    ) select xmlelement('response',
+            xmlattributes(
+                'https://github.com/sys-team/ASA.rest' as "xmlns",
+                @xid as "xid",
+                now() as "ts",
+                @cts as "cts",
+                @pageSize as "page-size",
+                @pageNumber as "page-number",
+                count (*) as "page-row-count",
+                @@servername as "servername",
+                db_name() as "dbname",
+                property('machinename') as "host",
+                @newsNextOffset as "news-next-offset",
+                @entity as "entity-name",
+                if util.HTTPVariableOrHeader ('if-none-match') is not null then
+                    (select top 1 ar.etagFromTsAndId (ts,id)
+                        from xmldataset
+                        order by ts desc, id desc
+                    )
+                endif as "ETag"
+            ),
         @response
-    );
-    
+    )
+        into @response
+        from xmldataset
+    ;
+
     set @maxLogLength = 65536;
     
     update ar.log set response =
