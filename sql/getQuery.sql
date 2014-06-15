@@ -369,9 +369,9 @@ begin
             union select @where
             union select @where2
             union select string (
-                'ts > ''', ar.tsFromETag(@ETag), '''',
+                'ts >= ''', ar.tsFromETag(@ETag), '''',
                 ' and (id > ', ar.idFromETag(@ETag),
-                ' or ts > ''', dateadd(ms,1,ar.tsFromETag(@ETag)), '''',
+                ' or ts >= ''', dateadd(ms,1,ar.tsFromETag(@ETag)), '''',
                 ')'
             ) where length(@ETag) > 3
         ) as t
