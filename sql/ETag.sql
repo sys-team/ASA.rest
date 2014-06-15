@@ -1,18 +1,38 @@
 create or replace function ar.ETagFromTsAndId (
     @ts timestamp,
-    @id BIGINT
+    @id BIGINT,
+    @version int default '1'
 ) returns STRING DETERMINISTIC 
 begin
 
     declare @result STRING;
     
     set @result = string (
+        @version,
+        '-',
         util.offsetFromTs(@ts),
         '-',
         @id
     );
 
     return @result;
+
+end;
+
+
+create or replace function ar.versionFromETag (
+    @etag STRING
+) returns string DETERMINISTIC 
+begin
+
+    declare @result timestamp;
+    
+    set @result = util.tsFromOffset(regexp_substr(@etag,'^[^-]*'));
+
+    return @result;
+    
+    exception
+        when others then return null;
 
 end;
 
@@ -24,7 +44,7 @@ begin
 
     declare @result timestamp;
     
-    set @result = util.tsFromOffset(regexp_substr(@etag,'^[^-]*'));
+    set @result = util.tsFromOffset(regexp_substr(@etag,'(?<=^.*[-])[^-]*'));
 
     return @result;
     
