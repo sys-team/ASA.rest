@@ -274,13 +274,13 @@ begin
                         coalesce((select top 1
                                          ' join ' +
                                          @currentEntity + ' on ' +
-                                         @prevAlias + '.' + primaryColumn + '=' + c_alias + '.' + foreignColumn
+                                         @prevAlias + '.[' + primaryColumn + '] = ' + c_alias + '.[' + foreignColumn + ']'
                                     from #fk 
                                    where entityName = @prevName),
                                  (select top 1
                                          ' join ' +
                                          @currentEntity + ' on ' +
-                                         @prevAlias + '.' + foreignColumn + '=' + c_alias + '.' + primaryColumn
+                                         @prevAlias + '.[' + foreignColumn + ']=' + c_alias + '.[' + primaryColumn + ']'
                                     from #fk1
                                    where entityName = c_name),
                                   ', ' + @currentEntity );
