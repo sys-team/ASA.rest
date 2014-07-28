@@ -17,6 +17,7 @@ begin
     declare @varName long varchar;
     declare @rowcount integer;
     declare @maxLogLength integer;
+    declare @parentEntity long varchar;
     
     declare local temporary table #variable(
         name long varchar,
@@ -35,11 +36,13 @@ begin
             @code as code;
     
     select action,
-           entity
-      into @action, @entity
+           entity,
+           parentEntity
+      into @action, @entity, @parentEntity
       from openstring(value @url)
            with (action long varchar, entity long varchar, id long varchar, parentEntity long varchar)
-           option(delimited by '/') as t;
+           option(delimited by '/') as t
+    ;
     
     if varexists('@roles') = 0 then create variable @roles xml end if;
     if varexists('@isDba') = 0 then create variable @isDba integer end if;
@@ -158,7 +161,7 @@ begin
                 db_name() as "dbname",
                 property('machinename') as "host",
                 @newsNextOffset as "news-next-offset",
-                @entity as "entity-name",
+                isnull(@parentEntity,@entity) as "entity-name",
                 if util.HTTPVariableOrHeader ('if-none-match') is not null then
                     (select top 1 ar.etagFromTsAndId (ts,id)
                         from xmldataset
