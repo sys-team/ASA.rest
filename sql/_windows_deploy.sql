@@ -10,6 +10,7 @@ read c:\\sites\\ASA.rest\\sql\\csv_service.sql;
 read c:\\sites\\ASA.rest\\sql\\csvPost.sql;
 read c:\\sites\\ASA.rest\\sql\\entityDescription.sql;
 read c:\\sites\\ASA.rest\\sql\\entityIdAndType.sql;
+read c:\\sites\\ASA.rest\\sql\\ETag.sql;
 read c:\\sites\\ASA.rest\\sql\\fkList.sql;
 read c:\\sites\\ASA.rest\\sql\\getCollection.sql;
 read c:\\sites\\ASA.rest\\sql\\getEntity.sql;
