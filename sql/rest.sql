@@ -146,7 +146,7 @@ begin
     
     with xmldataset as (
         select * from openxml(xmlelement('root',@response), '/root/d') with(
-            id BIGINT '*[@name="id"]', ts timestamp '*[@name="ts"]'
+            id STRING '*[@name="id"]', ts timestamp '*[@name="ts"]'
         )
     ) select xmlelement('response',
             xmlattributes(
@@ -161,11 +161,12 @@ begin
                 db_name() as "dbname",
                 property('machinename') as "host",
                 @newsNextOffset as "news-next-offset",
+                isnull(@parentEntity,@entity) as "title",
                 isnull(@parentEntity,@entity) as "entity-name",
                 if util.HTTPVariableOrHeader ('if-none-match') is not null then
                     (select top 1 ar.etagFromTsAndId (ts,id)
                         from xmldataset
-                        order by ts desc, id desc
+                        order by ts desc, cast(id as bigint) desc
                     )
                 endif as "ETag"
             ),
