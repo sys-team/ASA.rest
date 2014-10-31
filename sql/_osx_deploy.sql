@@ -10,6 +10,7 @@ read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/csv_service.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/csvPost.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/entityDescription.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/entityIdAndType.sql;
+read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/ETag.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/fkList.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/getCollection.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/getEntity.sql;
