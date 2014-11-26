@@ -146,7 +146,7 @@ begin
     
     with xmldataset as (
         select * from openxml(xmlelement('root',@response), '/root/d') with(
-            id STRING '*[@name="id"]', ts timestamp '*[@name="ts"]'
+            id STRING '*[@name="id"]', ts timestamp '*[@name="ts"]', rowcount integer '*[@name="__rowcount__"]'
         )
     ) select xmlelement('response',
             xmlattributes(
@@ -168,9 +168,10 @@ begin
                         from xmldataset
                         order by ts desc, cast(id as bigint) desc
                     )
-                endif as "ETag"
+                endif as "ETag",
+                if max(rowcount) is not null then max(rowcount) endif as "rows-affected"
             ),
-        @response
+        if max(rowcount) is null then @response endif
     )
         into @response
         from xmldataset
