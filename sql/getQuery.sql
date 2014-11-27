@@ -443,15 +443,16 @@ begin
     if @showNulls = 'yes' then
         set temporary option for_xml_null_treatment  = 'Omit';
     end if;
-    
-    --set @result = @rawData;
-    --message 'ar.getQuery @rawData = ', @rawData;
+
     
     if @spWithNoResultSet = 0 then
-        set @rawData = ar.chestToRawData(@entity,@rawData);
+        if not isnull(util.getUserOption ('ar.chestToRawData'), 'true') = 'false' then
+            set @rawdata = ar.chestToRawData(@entity,@rawData)
+        end if;
+    
         set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);
     end if;
     
     return @result;
-end
-;
+    
+end;
