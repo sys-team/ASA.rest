@@ -15,7 +15,6 @@ begin
     declare @action long varchar;
     declare @cts datetime;
     declare @varName long varchar;
-    declare @rowcount integer;
     declare @maxLogLength integer;
     declare @parentEntity long varchar;
     
@@ -46,7 +45,8 @@ begin
     
     if varexists('@roles') = 0 then create variable @roles xml end if;
     if varexists('@isDba') = 0 then create variable @isDba integer end if;
-    
+    if varexists('@rowcount') = 0 then create variable @rowcount integer end if;
+
     if @authType <> 'basic' then
         set @roles = uac.UOAuthAuthorize(@code);
         if varexists('@UOAuthAccessToken') = 0 then create variable @UOAuthAccessToken long varchar end if;
@@ -154,9 +154,9 @@ begin
                 @xid as "xid",
                 now() as "ts",
                 @cts as "cts",
-                @pageSize as "page-size",
-                @pageNumber as "page-number",
-                count (*) as "page-row-count",
+                if @rowcount is null then @pageSize endif as "page-size",
+                if @rowcount is null then @pageNumber endif as "page-number",
+                if @rowcount is null then count (*) endif as "page-row-count",
                 @@servername as "servername",
                 db_name() as "dbname",
                 property('machinename') as "host",
@@ -169,9 +169,9 @@ begin
                         order by ts desc, cast(id as bigint) desc
                     )
                 endif as "ETag",
-                if max(rowcount) is not null then max(rowcount) endif as "rows-affected"
+                if @rowcount is not null then @rowcount endif as "rows-affected"
             ),
-        if max(rowcount) is null then @response endif
+        @response 
     )
         into @response
         from xmldataset

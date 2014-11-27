@@ -26,7 +26,6 @@ begin
     declare @prevParsedName STRING;
     declare @prevDirection STRING;
     declare @sql STRING;
-    declare @sql0 STRING;
     declare @from STRING;
     declare @where STRING;
     declare @where2 STRING;
@@ -37,6 +36,7 @@ begin
     declare @pos integer;
     declare @currentEntity STRING;
     declare @direction STRING;
+    declare @spWithNoResultSet integer;
     
     declare local temporary table #entity(
         id integer default autoincrement,
@@ -196,8 +196,14 @@ begin
     
     --
     if isnull(@columns, '') = '' and @entityType = 'sp' then
+        set @spWithNoResultSet = 1;
+    else
+        set @spWithNoResultSet = 0;
+    end if;
     
-        set @sql0 = 'call ' + @parsedName + '(' +
+    if @spWithNoResultSet = 1 then
+    
+        set @sql = 'call ' + @parsedName + '(' +
                         (select list(d)
                           from (
                               select '[' + name + ']=' + value as d
@@ -209,8 +215,6 @@ begin
                                       and predicate like '%=%'
                                       and ar.isColumn(@entity, predicateColumn, 1, 'sp') = 1) as t
                       ) + ')';
-                      
-        set @sql = 'select @@rowcount as __rowcount__ for xml raw, elements';
                       
     else
     
@@ -422,17 +426,19 @@ begin
        set sqlText = if sqlText is not null then sqlText + '; ' else '' endif + @sql
      where xid = @xid;
     
-    set @sql = 'set @rawData = (' + @sql +')';
+    if @spWithNoResultSet = 0 then
+        set @sql = 'set @rawData = (' + @sql +')';
+    end if;
     
     if @showNulls = 'yes' then
         set temporary option for_xml_null_treatment  = 'Empty';
     end if;
     
-    if @sql0 is not null then
-        execute immediate @sql0;
-    end if;
-    
     execute immediate @sql;
+    
+    if @spWithNoResultSet = 1 then
+        set @rowcount = @@rowcount;
+    end if;
     
     if @showNulls = 'yes' then
         set temporary option for_xml_null_treatment  = 'Omit';
@@ -440,9 +446,11 @@ begin
     
     --set @result = @rawData;
     --message 'ar.getQuery @rawData = ', @rawData;
-    set @rawData = ar.chestToRawData(@entity,@rawData);
-    --set @result = @rawData;
-    set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);    
+    
+    if @spWithNoResultSet = 0 then
+        set @rawData = ar.chestToRawData(@entity,@rawData);
+        set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);
+    end if;
     
     return @result;
 end
