@@ -438,12 +438,11 @@ begin
         set temporary option for_xml_null_treatment  = 'Omit';
     end if;
     
-    --set @result = @rawData;
-    --message 'ar.getQuery @rawData = ', @rawData;
-    set @rawData = ar.chestToRawData(@entity,@rawData);
-    --set @result = @rawData;
+    select ar.chestToRawData(@entity,@rawData) into @rawData
+    where not isnull(util.getUserOption ('ar.chestToRawData'), 'true') = 'false';
+    
     set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);    
     
     return @result;
-end
-;
+    
+end;
