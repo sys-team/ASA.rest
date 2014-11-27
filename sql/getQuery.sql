@@ -438,8 +438,9 @@ begin
         set temporary option for_xml_null_treatment  = 'Omit';
     end if;
     
-    select ar.chestToRawData(@entity,@rawData) into @rawData
-    where not isnull(util.getUserOption ('ar.chestToRawData'), 'true') = 'false';
+    if not isnull(util.getUserOption ('ar.chestToRawData'), 'true') = 'false' then
+        set @rawdata = ar.chestToRawData(@entity,@rawData)
+    end if;
     
     set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);    
     
