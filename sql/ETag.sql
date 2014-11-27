@@ -43,8 +43,14 @@ create or replace function ar.tsFromETag (
 begin
 
     declare @result timestamp;
-    
-    set @result = util.tsFromOffset(regexp_substr(@etag,'(?<=^.*[-])[^-]*'));
+
+    set @result = util.tsFromOffset(
+        isnull(
+            nullif(
+                regexp_substr(@etag,'(?<=^.*[-])[^-]*'),''
+            )
+        ,'19000101000000')
+    );
 
     return @result;
     
