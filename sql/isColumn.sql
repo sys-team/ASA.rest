@@ -1,8 +1,10 @@
 create or replace function ar.isColumn(
-    @entity long varchar,
-    @columnName long varchar,
+    @entity STRING,
+    @columnName STRING,
     @procMode integer default 0,
-    @entityType long varchar default 'any')
+    @entityType STRING default 'any',
+    @noParmsInResultSet integer default 1
+)
 returns integer
 begin
     
@@ -13,7 +15,13 @@ begin
                  and su.user_name =  left(@entity, locate(@entity,'.') -1)
                  and p.parm_name = @columnName
                  and (p.parm_type = 0 and @procMode = 1
-                  or p.parm_type in (1,4) and @procMode = 0)
+                  or p.parm_type in (1,4) and @procMode = 0
+                  and (not exists (select *
+                                    from sys.sysprocparm p2
+                                   where p2.proc_id = p.proc_id
+                                     and p2.parm_type = 0
+                                     and p2.parm_name = p.parm_name)
+                   or @noParmsInResultSet = 0))
                  and @entityType in ('sp', 'any'))
     or exists(select *
                 from sys.systable st join sys.sysuserperm su on st.creator = su.user_id
