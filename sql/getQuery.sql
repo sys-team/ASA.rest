@@ -222,8 +222,8 @@ begin
                     from ar.entityIdAndType('dbo.extra')
                    where entityId is not null)
           and ar.isColumn(@entity, 'id') = 1
-          and ar.columnDatatype(@entityId, 'id') in  ('integer','bigint') then
-           
+          and ar.columnDatatype(@entityId, 'id', @entityType) in  ('integer','bigint') then
+
             set @extra = '(select xmlagg(xmlelement(''extra'', xmlattributes(et.code as "name"), e.value)) '+
                          'from dbo.extra e join dbo.etype et on e.etype = et.id ' +
                          'where e.record_id = ' + @entityAlias + '.id '+
