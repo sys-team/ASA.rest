@@ -29,7 +29,7 @@ begin
     declare @from STRING;
     declare @where STRING;
     declare @where2 STRING;
-    declare @whereJoin STRING;  
+    declare @whereJoin STRING;
     declare @extra STRING;
     declare @error STRING;
     declare @i integer;
@@ -49,19 +49,19 @@ begin
         rawPredicate STRING,
         rawPermPredicate STRING
     );
-    
+
     declare local temporary table #predicate(
         entityId integer,
         predicate STRING,
         predicateColumn STRING
     );
-    
+
     declare local temporary table #permPredicate(
         entityId integer,
         predicate STRING,
         predicateColumn STRING
     );
-    
+
     declare local temporary table #joins(
         parent integer,
         child integer,
@@ -74,7 +74,7 @@ begin
         primaryColumn STRING,
         foreignColumn STRING
     );
-                                      
+
     declare local temporary table #fk1(
         entityName STRING,
         primaryColumn STRING,
@@ -82,7 +82,7 @@ begin
     );
 
     --call ar.parseVariables();
-    
+
     -- parse url
     set @url = substr(@url, locate(@url,'/') +1);
 
@@ -92,7 +92,7 @@ begin
         if mod(@i,2) = 0 then
             set @url = left(@url, @pos - 1) + '~' + substr(@url, @pos + 1);
         end if;
-        
+
         set @i = @i + 1;
         set @pos = locate(@url, '/', @pos+1);
     end loop;
@@ -104,8 +104,8 @@ begin
            with (name STRING, rawPredicate STRING)
            option(delimited by '/' row delimited by '~') as t
      where name like '%.%';
-        
-    -- data sources    
+
+    -- data sources
     update #entity
        set name = ds.dataSource,
            entityType = ds.type
@@ -120,28 +120,28 @@ begin
            rawPermPredicate = if ar.entityPermission(regexp_substr(#entity.name, '^[^\.]+'),
                                                      regexp_substr(#entity.name,'(?<=\.).+')) = 1 then 'R' else null endif
       from #entity outer apply (select entityId, entityType from ar.entityIdAndType(name, #entity.entityType)) as l;
-      
+
     -- error
     set @error = (select list(name)
                     from #entity
                    where entityId is null);
-                   
+
     if @error <> '' then
         raiserror 55555 'Entity %1! not found', @error;
         return;
     end if;
-      
+
     --set @result = (select * from #entity for xml raw, elements);
     --return @result;
     --message 'ar.getQuery @roles = ', @roles;
-    
-    -- predicate parsing  
+
+    -- predicate parsing
     call ar.parsePredicate();
-    
+
     --set @result = (select * from #predicate for xml raw, elements);
     --set @result = @result + (select * from #joins for xml raw, elements);
     --return @result;
-    
+
     -- last entity
     select top 1
            id,
@@ -153,26 +153,26 @@ begin
       into @id, @entity, @entityId, @entityAlias, @entityType, @parsedName
       from #entity
      order by id desc;
-     
+
     -- order by
     if ar.isColumn(@entity, @orderBy) = 0 then
         set @orderBy = null;
     end if;
-    
+
     if @orderDir is null then
         set @orderDir = 'desc';
     end if;
-    
+
     if @ETag is not null then
         set @orderBy = 'left(ts,23) asc, id asc';
         set @orderDir = '';
     end if;
-    
+
     -- columns
     if @columns is null then
         set @columns = '*';
     end if;
-    
+
     -- If one record by key then @longValues = yes
     if exists (
             select * from (
@@ -190,20 +190,20 @@ begin
     ) then
         set @longValues = 'yes';
     end if;
-    
+
     set @columns = ar.parseColumns(
         @entityId, @columns, @entityAlias, @entityType, if @longValues = 'yes' then 1 else 0 endif
     );
-    
+
     --
     if isnull(@columns, '') = '' and @entityType = 'sp' then
         set @spWithNoResultSet = 1;
     else
         set @spWithNoResultSet = 0;
     end if;
-    
+
     if @spWithNoResultSet = 1 then
-    
+
         set @sql = 'call ' + @parsedName + '(' +
                         (select list(d)
                           from (
@@ -216,9 +216,9 @@ begin
                                       and predicate like '%=%'
                                       and ar.isColumn(@entity, predicateColumn, 1, 'sp') = 1) as t
                       ) + ')';
-                      
+
     else
-    
+
         if exists(select *
                     from ar.entityIdAndType('dbo.extra')
                    where entityId is not null)
@@ -230,19 +230,19 @@ begin
                          'where e.record_id = ' + @entityAlias + '.id '+
                          'and et.table_name = ''' + substr(@entity, locate(@entity,'.') +1) + ''')' +
                          'as [___extras]';
-              
+
         end if;
-        
+
         -- root entity permission check
         if not exists(select *
                         from #entity
                        where id = 1
                          and rawPermPredicate is not null) and @isDba = 0 then
-                        
+
             raiserror 55555 'Permission denied on entity %1!', @entity;
             return;
         end if;
-                   
+
         for lloop as ccur cursor for
         select entityId as c_entityId,
                entityType as c_entityType,
@@ -287,26 +287,26 @@ begin
                     ) as t;
 
             end case;
-        
+
             if c_id = 1 then
                 set @from = @currentEntity;
-                
+
                 insert into #fk with auto name
                 select entityName,
                        primaryColumn,
                        foreignColumn
                   from ar.fkList(c_entityId, c_name);
             else
-            
+
                 delete from #fk;
                 delete from #fk1;
-                
+
                 insert into #fk with auto name
                 select entityName,
                        primaryColumn,
                        foreignColumn
                   from ar.fkList(c_entityId, c_name);
-                  
+
                 insert into #fk1 with auto name
                 select entityName,
                        primaryColumn,
@@ -338,45 +338,45 @@ begin
                 if exists (select *
                              from #fk1
                             where entityName = c_name) then
-                            
+
                     set @distinct = 'yes';
                     set @direction = 'up';
-                    
+
                 elseif exists (select *
                              from #fk
                             where entityName = @prevName) then
-                        
+
                     set @direction = 'down';
                 else
                     set @direction = 'cross';
                 end if;
-                
+
                 -- message 'ar.getQuery @direction = ', @direction;
                 -- pemission check by direction
                 if @isDba = 0 then
                     if @direction in ('cross') and c_rawPermPredicate is null then
-                   
+
                         raiserror 55555 'Permission denied on cross join with %1!', c_name;
                         return;
-                        
+
                     elseif @direction in ('down') and c_rawPermPredicate is null and @prevDirection <> 'down' then
-                    
+
                         raiserror 55555 'Permission denied on down join with %1!', c_name;
                         return;
-                        
+
                     end if;
                 end if;
-                
+
             end if;
-            
+
             set @prevEntityId = c_entityId;
             set @prevName = c_name;
             set @prevAlias = c_alias;
             set @prevParsedName = c_parsedName;
             set @prevDirection = @direction;
-        
+
         end for;
-        
+
         set @sql =
             'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
             ' top ' + cast(@pageSize as varchar(64)) + ' ' +
@@ -384,14 +384,14 @@ begin
             @columns  +
             if @extra is not null then ',' + @extra else '' endif + ' '
         ;
-        
+
         set @whereJoin = (
             select list(p.alias +'.[' + j.parentColumn + '] = ' + c.alias + '.[' + j.childColumn + ']', ' and ')
             from #joins j
                 join #entity p on j.parent = p.id
                 join #entity c on j.child = c.id
         );
-        
+
         set @where = (
             select list(e.alias + '.[' + v.name + ']' + v.operator + ' ' + v.value, ' and ')
             from #variable v, #entity e
@@ -399,7 +399,7 @@ begin
                and v.name not like '%:'
                and ar.isColumn(e.name, v.name) = 1
         );
-        
+
         set @where2 = (
             select list(e.alias + '.' + p.predicate, ' and ')
             from #entity e join #predicate p on e.id = p.entityId
@@ -410,7 +410,7 @@ begin
                 )
                 and ar.isColumn(e.name, p.predicateColumn) = 1
         );
-        
+
         set @where = (
             select list(d, ' and ') as li
             from (
@@ -426,8 +426,8 @@ begin
             ) as t
             where isnull(d, '') <> ''
         );
-        
-        set @sql = @sql + 'from ' + @from + 
+
+        set @sql = @sql + 'from ' + @from +
             if @where <> '' then ' where ' else '' endif + @where +
             if @orderBy is not null
                and (@ETag is not null or @distinct <> 'yes' or locate(@columns, '[' + @orderBy + ']') <> 0)
@@ -440,41 +440,41 @@ begin
             else '' endif +
             ' for xml raw, elements'
         ;
-        
+
     end if;
     --message 'ar.getQuery @sql = ', @sql;
-    
+
     update ar.log
        set sqlText = if sqlText is not null then sqlText + '; ' else '' endif + @sql
      where xid = @xid;
-    
+
     if @spWithNoResultSet = 0 then
         set @sql = 'set @rawData = (' + @sql +')';
     end if;
-    
+
     if @showNulls = 'yes' then
         set temporary option for_xml_null_treatment  = 'Empty';
     end if;
-    
+
     execute immediate @sql;
-    
+
     if @spWithNoResultSet = 1 then
         set @rowcount = @@rowcount;
     end if;
-    
+
     if @showNulls = 'yes' then
         set temporary option for_xml_null_treatment  = 'Omit';
     end if;
 
-    
+
     if @spWithNoResultSet = 0 then
         if not isnull(util.getUserOption ('ar.chestToRawData'), 'true') = 'false' then
             set @rawdata = ar.chestToRawData(@entity,@rawData)
         end if;
-    
+
         set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);
     end if;
-    
+
     return @result;
-    
+
 end;
