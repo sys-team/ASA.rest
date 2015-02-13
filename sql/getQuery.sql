@@ -37,7 +37,8 @@ begin
     declare @currentEntity STRING;
     declare @direction STRING;
     declare @spWithNoResultSet integer;
-    
+    declare @isLateral integer;
+
     declare local temporary table #entity(
         id integer default autoincrement,
         entityId integer,
@@ -257,19 +258,34 @@ begin
                 when 'table' then
                     set @currentEntity = c_parsedName + ' as ' + c_alias;
                 when 'sp' then
-                    set @currentEntity = c_parsedName + '(' + (
-                            select list(d)
-                            from (
-                                select '[' + name + ']=' + value as d
-                                    from #variable
-                                    where ar.isColumn(c_name, name, 1, 'sp') = 1
-                                union select predicate
-                                    from #predicate
-                                    where entityId = c_id
-                                        and predicate like '%=%'
-                                        and ar.isColumn(c_name, predicateColumn, 1, 'sp') = 1) as t
-                        ) + ') as ' + c_alias
-                    ;
+
+                    select
+                        string (
+                            c_parsedName, '(',
+                            list(d),
+                            ') as ', c_alias
+                        ),
+                        max(isLateral)
+                    into @currentEntity, @isLateral
+                    from (
+                        select '[' + name + ']=' + value as d, 0 as isLateral
+                            from #variable
+                            where ar.isColumn(c_name, name, 1, 'sp') = 1
+                        union select predicate, 0
+                            from #predicate
+                            where entityId = c_id
+                                and predicate like '%=%'
+                                and ar.isColumn(c_name, predicateColumn, 1, 'sp') = 1
+                        union select
+                            '[' + foreignColumn + ']=' + @prevAlias + '.[' + primaryColumn + ']',
+                            1
+                        from ar.fkList(c_entityId, c_name) fk
+                        where entityName in (
+                            @prevName,
+                            ch.entityStorage(@prevName)
+                        ) and ar.isColumn(c_name, foreignColumn, 1, 'sp') = 1
+                    ) as t;
+
             end case;
         
             if c_id = 1 then
@@ -296,22 +312,28 @@ begin
                        primaryColumn,
                        foreignColumn
                   from ar.fkList(@prevEntityId, c_name);
-            
-                set @from  = @from + 
-                            coalesce((select top 1
-                                             ' join ' +
-                                             @currentEntity + ' on ' +
-                                             @prevAlias + '.[' + primaryColumn + '] = ' + c_alias + '.[' + foreignColumn + ']'
-                                        from #fk 
-                                       where entityName = @prevName),
-                                     (select top 1
-                                             ' join ' +
-                                             @currentEntity + ' on ' +
-                                             @prevAlias + '.[' + foreignColumn + ']=' + c_alias + '.[' + primaryColumn + ']'
-                                        from #fk1
-                                       where entityName = c_name),
-                                      ', ' + @currentEntity );
-                                      
+
+                set @from  = @from + coalesce(
+                    (select top 1
+                            ' join ' +
+                            @currentEntity + ' on ' +
+                            @prevAlias + '.[' + primaryColumn + '] = ' + c_alias + '.[' + foreignColumn + ']'
+                        from #fk
+                        where entityName in (
+                            @prevName,
+                            ch.entityStorage(@prevName)
+                        ) and ar.isColumn (c_name, foreignColumn) = 1
+                    ),
+                    (select top 1
+                            ' join ' +
+                            @currentEntity + ' on ' +
+                            @prevAlias + '.[' + foreignColumn + ']=' + c_alias + '.[' + primaryColumn + ']'
+                        from #fk1
+                        where entityName = c_name
+                    ),
+                    ', ' + if @isLateral = 1 then 'lateral (' + replace(@currentEntity,') as',')) as') else @currentEntity endif
+                );
+
                 -- auto distinct and direction
                 if exists (select *
                              from #fk1
