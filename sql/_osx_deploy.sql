@@ -1,6 +1,7 @@
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/_tables.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/addElement.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/arest_service.sql;
+read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/aws_monitoring.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/checkForbiddenChars.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/chestToRawData.sql;
 read /Users/%YourUserNameHere%/Sites/ASA.rest/sql/entityPermission.sql;
