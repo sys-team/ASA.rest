@@ -52,7 +52,7 @@ handler begin
         ']'
 
         debug only
-        
+
     end for;
 
 end;
@@ -60,4 +60,8 @@ end;
 alter event aws_ar_monitoring_event add SCHEDULE heartbeat
     start time '00:01:00'
     every 1 minutes
+;
+
+alter event aws_ar_monitoring_event
+    disable
 ;
