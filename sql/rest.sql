@@ -30,10 +30,12 @@ begin
     set @xid = newid();
 
     insert into ar.log with auto name
-    select @xid as xid,
-            @url as url,
-            @code as code;
-    
+    select
+        @xid as xid,
+        @url as url,
+        @code as code
+    ;
+
     select action,
            entity,
            parentEntity
@@ -51,6 +53,14 @@ begin
         set @roles = uac.UOAuthAuthorize(@code);
         if varexists('@UOAuthAccessToken') = 0 then create variable @UOAuthAccessToken long varchar end if;
         set @UOAuthAccessToken = @code;
+
+        update ar.log
+           set account = (
+               select account
+               from uac.token
+               where token = @code
+           )
+        where xid = @xid;
     end if;
     
     -- http variables
