@@ -187,8 +187,8 @@ begin
         from xmldataset
     ;
 
-    set @maxLogLength = 65536;
-    
+    set @maxLogLength = isnull(nullif(util.getUserOption('ar.maxLogLength'),''),65536);
+
     update ar.log set response =
         if length(@response) > @maxLogLength then
             xmlelement('response','<![CDATA[' + left(@response,@maxLogLength) + ']]>')
