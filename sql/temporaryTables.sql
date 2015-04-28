@@ -4,7 +4,7 @@ end if
 ;
 
 create global temporary table ar.log(
-    
+
     url long varchar,
     variables long varchar,
     response xml,
@@ -18,7 +18,6 @@ create global temporary table ar.log(
 
     id ID, xid GUID, ts TS, cts CTS,
     unique (xid), primary key (id)
-    
+
 )  not transactional share by all
 ;
-

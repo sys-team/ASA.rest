@@ -17,13 +17,13 @@ begin
     declare @varName long varchar;
     declare @maxLogLength integer;
     declare @parentEntity long varchar;
-    
+
     declare local temporary table #variable(
         name long varchar,
         value long varchar,
         operator varchar(64) default '='
     );
-                                 
+
     if varexists('@xid') = 0 then create variable @xid GUID end if;
 
     set @cts = now();
@@ -44,7 +44,7 @@ begin
            with (action long varchar, entity long varchar, id long varchar, parentEntity long varchar)
            option(delimited by '/') as t
     ;
-    
+
     if varexists('@roles') = 0 then create variable @roles xml end if;
     if varexists('@isDba') = 0 then create variable @isDba integer end if;
     if varexists('@rowcount') = 0 then create variable @rowcount integer end if;
@@ -62,31 +62,31 @@ begin
            )
         where xid = @xid;
     end if;
-    
+
     -- http variables
     insert into #variable with auto name
     select
         name, value
         from util.httpVariables()
     ;
-    
-    update ar.log 
+
+    update ar.log
         set variables = (select list(name +'='+value, '&') from #variable)
         where xid = @xid
     ;
-     
 
-      
-    -- entity id & entity type       
+
+
+    -- entity id & entity type
     if varexists('@entityId') = 0 then create variable @entityId integer end if;
     if varexists('@entityType') = 0 then create variable @entityType varchar(128) end if;
-    if varexists('@newsNextOffset') = 0 then create variable @newsNextOffset varchar(128) end if;    
-    
+    if varexists('@newsNextOffset') = 0 then create variable @newsNextOffset varchar(128) end if;
+
     select entityId,
            entityType
       into @entityId, @entityType
       from ar.entityIdAndType(@entity);
-      
+
     -- isolation level set
     --message 'ar.rest @isolationLevel = ', @isolationLevel;
     case @isolationLevel
@@ -99,22 +99,22 @@ begin
         when '3' then
             set temporary option isolation_level = 3;
     end case;
-    
+
     -- forbidden chars
     if exists (select *
                  from #variable
                 where ar.checkForbiddenChars(name) = 1
                    or ar.checkForbiddenChars(value) = 1)
        or ar.checkForbiddenChars(@url) = 1 then
-       
+
         set @response = xmlelement('error', 'Forbidden chracter detected');
-           
+
     -- check @roles
     elseif not exists(select *
                     from openxml(@roles,'/*:response/*:roles/*:role')
                          with(code long varchar '*:code')
                    where code = 'authenticated') and @authType <> 'basic' then
-                   
+
         set @response = xmlelement('error', 'Not authorized');
         CALL dbo.sa_set_http_header( '@HttpStatus', '403' );
     else
@@ -125,16 +125,16 @@ begin
                                  with(code long varchar '*:code', data long varchar '*:data')
                            where code = @@servername + '.' + db_name()
                              and data = 'dba');
-                             
+
             if isnull(util.getUserOption('uac.emailAuth'),'0') = '1' then
                 set @isDba = 1;
-            end if;    
+            end if;
         else
             set @isDba = 1;
         end if;
-           
+
         call ar.parseVariables();
-        
+
         case @action
             when 'get' then
                 set @response = ar.getQuery(@url);
@@ -152,8 +152,8 @@ begin
                 set @response = ar.link(@url);
         end case;
 
-    end if; 
-    
+    end if;
+
     with xmldataset as (
         select * from openxml(xmlelement('root',@response), '/root/d') with(
             id STRING '*[@name="id"]', ts timestamp '*[@name="ts"]', rowcount integer '*[@name="__rowcount__"]'
@@ -181,7 +181,7 @@ begin
                 endif as "ETag",
                 if @rowcount is not null then @rowcount endif as "rows-affected"
             ),
-        @response 
+        @response
     )
         into @response
         from xmldataset
@@ -198,29 +198,28 @@ begin
     where xid = @xid;
 
     return @response;
-    
-    exception  
+
+    exception
         when others then
-        
+
             set @error = errormsg();
             if @error like 'RAISERROR executed: %' then
                 set @errorCode =  trim(substring(@error, locate(@error,'RAISERROR executed: ') + length('RAISERROR executed: ')));
             end if;
 
-            rollback;       
-            
+            rollback;
+
             set @response = xmlelement('response',
                 xmlattributes(
                     'https://github.com/sys-team/ASA.rest' as "xmlns",now() as "ts"
                 ),
                 xmlelement('error', xmlattributes(@errorCode as "code"), @error)
             );
-            
+
             update ar.log
                set response = @response
             where xid = @xid;
-            
+
             return @response;
-            
-end
-;
+
+end;
