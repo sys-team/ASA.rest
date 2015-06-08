@@ -1,5 +1,6 @@
 create or replace function ar.getQuery(
     @url STRING,
+    @countMode integer default 0,
     @pageSize integer default coalesce(nullif(http_header('page-size'),''), http_variable('page-size:'),10),
     @pageNumber integer default coalesce(nullif(http_header('page-number'),''), http_variable('page-number:'),1),
     @orderBy STRING default coalesce(nullif(http_header('order-by'),''),http_variable('order-by:'),'id'),
@@ -378,11 +379,17 @@ begin
         end for;
 
         set @sql =
-            'select ' + if @distinct = 'yes' then 'distinct ' else '' endif +
-            ' top ' + cast(@pageSize as varchar(64)) + ' ' +
-            ' start at ' + cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) + ' '+
-            @columns  +
-            if @extra is not null then ',' + @extra else '' endif + ' '
+            if isnull(@countMode, 0) = 0 then
+                string(
+                    'select ', if @distinct = 'yes' then 'distinct ' else '' endif,
+                    ' top ', cast(@pageSize as varchar(64)),
+                    ' start at ' , cast((@pageNumber -1) * @pageSize + 1 as varchar(64)) , ' ',
+                    @columns,
+                    if @extra is not null then ',' + @extra else '' endif, ' '
+                )
+            else
+                'select count(*) as recordCount '
+            endif
         ;
 
         set @whereJoin = (
@@ -427,18 +434,25 @@ begin
             where isnull(d, '') <> ''
         );
 
-        set @sql = @sql + 'from ' + @from +
-            if @where <> '' then ' where ' else '' endif + @where +
-            if @orderBy is not null
-               and (@ETag is not null or @distinct <> 'yes' or locate(@columns, '[' + @orderBy + ']') <> 0)
-            then
-                string (
-                    ' order by ',
-                    if @ETag is null then @entityAlias + '.' endif,
-                    @orderBy, ' ', @orderDir
-                )
-            else '' endif +
+        set @sql = string(
+            @sql, 'from ', @from,
+
+            if @where <> '' then ' where ' else '' endif,  @where,
+
+            if isnull(@countMode, 0) = 0 then
+                if @orderBy is not null
+                   and (@ETag is not null or @distinct <> 'yes' or locate(@columns, '[' + @orderBy + ']') <> 0)
+                then
+                    string (
+                        ' order by ',
+                        if @ETag is null then @entityAlias + '.' endif,
+                        @orderBy, ' ', @orderDir
+                    )
+                else '' endif
+            endif,
+
             ' for xml raw, elements'
+        )
         ;
 
     end if;
@@ -467,12 +481,20 @@ begin
     end if;
 
 
-    if @spWithNoResultSet = 0 then
+    if @spWithNoResultSet = 0 and @countMode = 0 then
         if not isnull(util.getUserOption ('ar.chestToRawData'), 'true') = 'false' then
             set @rawdata = ar.chestToRawData(@entity,@rawData)
         end if;
 
         set @result = ar.processRawData(@entity, @entityId, @entityType, @rawData);
+    elseif @countMode  = 1 then
+
+        set @result = (
+            select xmlelement('count', cnt)
+            from openxml(@rawData, '/row/recordCount')
+                with(cnt integer '.')
+        );
+
     end if;
 
     return @result;

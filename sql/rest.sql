@@ -150,6 +150,8 @@ begin
                 set @response = ar.addElement(@url);
             when 'link' then
                 set @response = ar.link(@url);
+            when 'aggregate' then
+                set @response = ar.getQuery(@url, 1);
         end case;
 
     end if;
@@ -164,9 +166,9 @@ begin
                 @xid as "xid",
                 now() as "ts",
                 @cts as "cts",
-                if @rowcount is null then @pageSize endif as "page-size",
-                if @rowcount is null then @pageNumber endif as "page-number",
-                if @rowcount is null then count (*) endif as "page-row-count",
+                if @rowcount is null and @action <> 'aggregate' then @pageSize endif as "page-size",
+                if @rowcount is null and @action <> 'aggregate' then @pageNumber endif as "page-number",
+                if @rowcount is null and @action <> 'aggregate' then count (*) endif as "page-row-count",
                 @@servername as "servername",
                 db_name() as "dbname",
                 property('machinename') as "host",
