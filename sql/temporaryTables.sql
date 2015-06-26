@@ -16,8 +16,14 @@ create global temporary table ar.log(
     callerIP varchar(128) default connection_property('ClientNodeAddress'),
     sqlText long varchar,
 
+    deviceUUID string default http_header('DeviceUUID'),
+
     id ID, xid GUID, ts TS, cts CTS,
     unique (xid), primary key (id)
 
 )  not transactional share by all
 ;
+
+
+
+create index XK_ar_log_deviceuuid_ts on ar.log (deviceUIID,ts)
