@@ -400,7 +400,7 @@ begin
         );
 
         set @where = (
-            select list(e.alias + '.[' + v.name + ']' + v.operator + ' ' + v.value, ' and ')
+            select list(e.alias + '.[' + v.name + '] ' + v.operator + ' ' + v.value, ' and ')
             from #variable v, #entity e
             where v.name <> 'url'
                and v.name not like '%:'
