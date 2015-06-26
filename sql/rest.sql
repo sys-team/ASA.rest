@@ -33,7 +33,11 @@ begin
     select
         @xid as xid,
         @url as url,
-        @code as code
+        @code as code,
+        isnull(
+            util.HTTPVariableOrHeader('x-real-ip'),
+            connection_property('ClientNodeAddress')
+        ) as callerIP
     ;
 
     select action,
