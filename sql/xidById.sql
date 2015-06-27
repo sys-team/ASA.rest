@@ -22,10 +22,12 @@ begin
       from ch.dataSource
      where entity = @entity
        and FKDataSource is not null;
-       
-    if @entityType is null then 
-        set @entityType = (select entityType
-                             from ar.entityIdAndType(@entity));
+
+    if @entityType is null then
+        set @entityType = (
+            select entityType
+            from ar.entityIdAndType(@entity,'table')
+        );
     end if;
     
     set @entity = ar.parseEntity(@entity);
