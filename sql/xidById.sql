@@ -10,12 +10,12 @@ begin
     declare @entityType long varchar;
 
     set @entity = (select top 1 entityName from #fk where foreignColumn = @fkColumn);
-    
+
     if @entity is null then
         select cast(null as uniqueidentifier) as xid;
         return;
     end if;
-    
+
     select FKDataSource,
            FKType
       into @entity, @entityType
@@ -29,22 +29,21 @@ begin
             from ar.entityIdAndType(@entity,'table')
         );
     end if;
-    
+
     set @entity = ar.parseEntity(@entity);
 
-    set @sql = 'set @result = (select xid from ' + 
+    set @sql = 'set @result = (select xid from ' +
                 @entity + if @entityType = 'sp' then '()' else '' endif +
                 ' where [' + @idName +'] = ''' + @id +''')';
-                
+
     --message 'ar.xidById @sql = ', @sql;
-    
+
     execute immediate @sql;
-    
+
     select @result as xid;
-    
+
     exception
         when others then
             --message 'ar.xidById error = ',errormsg();
             return null;
-end
-;
+end;
