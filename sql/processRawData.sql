@@ -8,27 +8,42 @@ returns xml
 begin
     declare @result xml;
     declare @sql long varchar;
-    
+
+    declare local temporary table #columns(
+        name STRING,
+        dataTypeName STRING,
+        primary key(name)
+    );
+
+    insert into #columns with auto name
+    select distinct name
+    from openxml(xmlelement('root', @rawData), '/root/row/*')
+        with (name STRING '@mp:localname');
+
+    update #columns
+    set dataTypeName = ar.columnDatatype(@entityId, name, @entityType);
+
     -- message 'ar.processRawData @rawData = ', @rawData;
-    
+
     set  @sql =
         'select xmlagg(xmlelement(''d'', xmlattributes(''' +
                 @entity + ''' as "name"' +
                 ', xid as "xid"' +
             ' ),' +
             '(select xmlagg(' +
-            'if name = ''___extras'' then ' +
-                ' (select xmlagg(extra) from openxml(value,''/*/extra'') with(extra xml ''@mp:xmltext'')) '+ 
+            'if r.name = ''___extras'' then ' +
+                ' (select xmlagg(extra) from openxml(value,''/*/extra'') with(extra xml ''@mp:xmltext'')) '+
             'else ' +
                 'xmlelement(' +
-                'ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + '''),' +
-                'xmlattributes(name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
-                ' if ar.columnDatatype(' + cast(@entityId as varchar(24)) + ',name,''' + @entityType + ''') = ''xml''' +
+                'cols.dataTypeName,' +
+                'xmlattributes(r.name as "name", f.parent as "parent", lat.xid as "parent-xid") , '+
+                ' if cols.dataTypeName = ''xml''' +
                 ' then ar.processXml(value) else util.xmlEscape(value2) endif ) ' +
             ' endif '+
-            ')' + 
+            ')' +
         'from openxml(r ,''/row/*'') '+
         'with ( name long varchar ''@mp:localname'', value xml ''./@mp:xmltext'', value2 long varchar ''.'') as r ' +
+        ' join #columns cols on cols.name = r.name ' +
         ' left outer join (select foreignColumn, list(entityName order by entityName) as parent, '+
         ' list(primaryColumn order by entityName) as parentColumns ' +
         ' from #fk group by foreignColumn) as f '+
@@ -36,20 +51,20 @@ begin
         ' outer apply (select xid from ar.xidById(r.[name],r.[value2],parentColumns))' +
         ' as lat' +
         ' where r.name not in (''xid'') '+
-        ')' + 
+        ')' +
         ')) from ' +
         '(select * '+
         ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
         ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t'
     ;
-    
+
     -- message 'ar.processRawData @sql = ', @sql;
     set @sql = 'set @result = (' + @sql +')';
-    
+
     execute immediate @sql;
-        
-    --set @result = @rawData;    
+
+    --set @result = @rawData;
     return @result;
-    
+
 end
 ;
