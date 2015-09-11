@@ -430,6 +430,8 @@ begin
                     ' or ts >= ''', dateadd(ms,1,ar.tsFromETag(@ETag)), '''',
                     ')'
                 ) where length(@ETag) > 3
+                union select if count(*) <> 0 then ' xid in (' + list('''' + xid  +'''') + ') ' endif
+                from #ids
             ) as t
             where isnull(d, '') <> ''
         );

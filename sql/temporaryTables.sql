@@ -26,4 +26,4 @@ create global temporary table ar.log(
 
 
 
-create index XK_ar_log_deviceuuid_ts on ar.log (deviceUIID,ts)
+create index XK_ar_log_deviceuuid_ts on ar.log (deviceUUID,ts)

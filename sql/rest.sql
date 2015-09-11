@@ -24,7 +24,21 @@ begin
         operator varchar(64) default '='
     );
 
+    declare local temporary table #ids(
+        xid GUID,
+        primary key(xid)
+    );
+
     if varexists('@xid') = 0 then create variable @xid GUID end if;
+
+    if isnull(http_body(), '')  <> '' then
+
+        insert into #ids with auto name
+        select xid
+        from openxml(http_body(), '/*:request/*:d')
+            with(xid STRING '@xid')
+
+    end if;
 
     set @cts = now();
     set @xid = newid();
