@@ -192,7 +192,6 @@ begin
                 property('machinename') as "host",
                 @newsNextOffset as "news-next-offset",
                 isnull(@parentEntity,@entity) as "title",
-                isnull(@parentEntity,@entity) as "entity-name",
                 if util.HTTPVariableOrHeader ('if-none-match') is not null then
                     (select top 1 ar.etagFromTsAndId (ts,id)
                         from xmldataset
