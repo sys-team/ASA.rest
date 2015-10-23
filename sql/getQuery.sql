@@ -447,8 +447,11 @@ begin
                 then
                     string (
                         ' order by ',
-                        if @ETag is null then @entityAlias + '.' endif,
-                        @orderBy, ' ', @orderDir
+                        if @ETag is not null then
+                            @orderBy
+                        else
+                            string (@entityAlias, '.[', @orderBy, '] ', @orderDir)
+                        endif
                     )
                 else '' endif
             endif,
