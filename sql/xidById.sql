@@ -1,13 +1,18 @@
 create or replace procedure ar.xidById(
-    @fkColumn long varchar,
-    @id long varchar,
-    @idName long varchar default 'id'
+    @fkColumn STRING,
+    @id STRING,
+    @idName STRING default 'id'
 )
 begin
     declare @result uniqueidentifier;
     declare @sql long varchar;
     declare @entity long varchar;
     declare @entityType long varchar;
+
+    if util.isGUID(@id) = 1 then
+        select @id as xid;
+        return;
+    end if;
 
     set @entity = (select top 1 entityName from #fk where foreignColumn = @fkColumn);
 
