@@ -194,7 +194,10 @@ begin
 
     set @columns = ar.parseColumns(
         @entityId, @columns, @entityAlias, @entityType, if @longValues = 'yes' then 1 else 0 endif
-    );
+    )
+    + if ar.isColumn(@entity, 'ts') = 1 then 
+        ', dateformat(t1.ts,''yyyy-mm-dd hh:nn:ss.ssssss'') as nanoTs'
+    endif;
 
     --
     if isnull(@columns, '') = '' and @entityType = 'sp' then
@@ -314,7 +317,7 @@ begin
                        foreignColumn
                   from ar.fkList(@prevEntityId, c_name);
 
-                set @from  = @from + coalesce(
+                set @from = @from + coalesce(
                     (select top 1
                             ' join ' +
                             @currentEntity + ' on ' +
@@ -422,15 +425,29 @@ begin
             select list(d, ' and ') as li
             from (
                 select @whereJoin as d
-                union select @where
-                union select @where2
-                union select string (
-                    'ts >= ''', ar.tsFromETag(@ETag), '''',
-                    ' and (id > ', ar.idFromETag(@ETag),
-                    ' or ts >= ''', dateadd(ms,1,ar.tsFromETag(@ETag)), '''',
-                    ')'
-                ) where length(@ETag) > 3
-                union select if count(*) <> 0 then ' xid in (' + list('''' + xid  +'''') + ') ' endif
+                union
+                select @where
+                union
+                select @where2
+                union
+                select string(
+                        'ts >= ''', ar.tsFromETag(@ETag), '''',
+                        ' and (id > ', ar.idFromETag(@ETag),
+                        ' or ts >= ''', dateadd(ms, 1, ar.tsFromETag(@ETag)), '''',
+                        ')'
+                    )
+                where length(@ETag) > 3
+                    and ar.versionFromETag(@ETag) = '1'
+                union
+                select string(
+                        't1.ts > ''',
+                        dateformat(ar.tsFromETag(@ETag), 'yyyy-mm-dd hh:nn:ss.ssssss'),
+                        ''''
+                    )
+                where length(@ETag) > 3
+                    and ar.versionFromETag(@ETag) = '2'
+                union
+                select if count(*) <> 0 then ' xid in (' + list('''' + xid  +'''') + ') ' endif
                 from #ids
             ) as t
             where isnull(d, '') <> ''

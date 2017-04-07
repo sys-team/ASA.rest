@@ -21,13 +21,17 @@ end;
 
 
 create or replace function ar.versionFromETag (
-    @etag STRING
-) returns string DETERMINISTIC
+    @ETag STRING
+) returns STRING DETERMINISTIC
 begin
 
     declare @result STRING;
 
-    set @result = regexp_substr(@etag,'^[^-]*');
+    set @result =  case @ETag
+        when '*' then '1'
+        when '**' then '2'
+        else regexp_substr(@etag,'^[^-]*')
+    end;
 
     return @result;
 

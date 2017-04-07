@@ -14,7 +14,7 @@ begin
         set @columns = replace(@columns, '[', '''');
         set @columns = replace(@columns, ']', '''');
     end if;
-    
+
     for lloop as ccur cursor for
     select c.column_name as c_column_name
       from sys.syscolumn c left outer join (select name
@@ -46,12 +46,12 @@ begin
         or name is not null)
        and @entityType = 'sp'
        and parm_type in (1,4)
-       
+
     do
         if length(@result) <> 0 then
             set @result = @result +',';
         end if;
-        
+
         if ar.columnDatatype(@entityId, c_column_name) = 'xml' then
             set @result = @result + '(select xmlagg(d) from openxml(xmlelement(''root'', ar.processXML(' +
                                     if @alias is not null then @alias + '.' else '' endif +
@@ -74,16 +74,16 @@ begin
         if length(@result) <> 0 then
             set @result = @result +',';
         end if;
-        
+
         set @result = @result + '[' + left(c_name,locate(c_name,'(') - 1) + '](' +
                       if @alias is not null then @alias + '.' else '' endif + '[' +
                       substring(c_name, locate(c_name,'(') + 1 , length(c_name) - locate(c_name,'(') -1) +'])' +
                       ' as [' + c_name +']';
-                      
+
         set @i = @i + 1;
-        
+
     end for;
-    
+
     return @result;
 end
 ;

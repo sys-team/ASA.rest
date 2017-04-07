@@ -28,7 +28,7 @@ begin
     set  @sql =
         'select xmlagg(xmlelement(''d'', xmlattributes(''' +
                 @entity + ''' as "name"' +
-                ', xid as "xid"' +
+                ', xid as "xid", nanoTs as "nanoTs"' +
             ' ),' +
             '(select xmlagg(' +
             'if r.name = ''___extras'' then ' +
@@ -50,12 +50,12 @@ begin
         ' on r.name = f.foreignColumn ' +
         ' outer apply (select xid from ar.xidById(r.[name],r.[value2],parentColumns))' +
         ' as lat' +
-        ' where r.name not in (''xid'') '+
+        ' where r.name not in (''xid'', ''nanoTs'') '+
         ')' +
         ')) from ' +
         '(select * '+
         ' from openxml(xmlelement(''root'',@rawData), ''/root/row'') ' +
-        ' with(r xml ''@mp:xmltext'', id long varchar ''id'', xid long varchar ''xid'')) as t'
+        ' with(r xml ''@mp:xmltext'', id STRING ''id'', xid STRING ''xid'', nanoTs STRING ''nanoTs'')) as t'
     ;
 
     -- message 'ar.processRawData @sql = ', @sql;

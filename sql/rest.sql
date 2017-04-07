@@ -4,7 +4,8 @@ create or replace function ar.rest(
     @code long varchar default isnull(nullif(replace(http_header('Authorization'), 'Bearer ', ''),''), http_variable('authorization:')),
     @pageSize integer default coalesce(nullif(http_header('page-size'),''), http_variable('page-size:'),10),
     @pageNumber integer default coalesce(nullif(http_header('page-number'),''), http_variable('page-number:'),1),
-    @isolationLevel long varchar default coalesce(nullif(http_header('isolation-level'),''), http_variable('isolation-level:'), '1')
+    @isolationLevel long varchar default coalesce(nullif(http_header('isolation-level'),''), http_variable('isolation-level:'), '1'),
+    @ETag STRING default util.HTTPVariableOrHeader ('if-none-match')
 )
 returns xml
 begin
@@ -176,7 +177,7 @@ begin
 
     with xmldataset as (
         select * from openxml(xmlelement('root',@response), '/root/d') with(
-            id STRING '*[@name="id"]', ts timestamp '*[@name="ts"]', rowcount integer '*[@name="__rowcount__"]'
+            id STRING '*[@name="id"]', ts timestamp '@nanoTs', rowcount integer '*[@name="__rowcount__"]'
         )
     ) select xmlelement('response',
             xmlattributes(
@@ -193,7 +194,7 @@ begin
                 @newsNextOffset as "news-next-offset",
                 isnull(@parentEntity,@entity) as "title",
                 if util.HTTPVariableOrHeader ('if-none-match') is not null then
-                    (select top 1 ar.etagFromTsAndId (ts,id)
+                    (select top 1 ar.etagFromTsAndId (ts, id, ar.versionFromETag(@ETag))
                         from xmldataset
                         order by ts desc, cast(id as bigint) desc
                     )
