@@ -165,7 +165,11 @@ begin
     end if;
 
     if @ETag is not null then
-        set @orderBy = 'left(ts,23) asc, id asc';
+        if ar.versionFromETag(@ETag) = '1' then
+            set @orderBy = 'left(ts,23) asc, id asc';
+        else
+            set @orderBy = 'ts';
+        end if;
         set @orderDir = '';
     end if;
 
@@ -195,7 +199,7 @@ begin
     set @columns = ar.parseColumns(
         @entityId, @columns, @entityAlias, @entityType, if @longValues = 'yes' then 1 else 0 endif
     )
-    + if ar.isColumn(@entity, 'ts') = 1 then 
+    + if ar.isColumn(@entity, 'ts') = 1 then
         ', dateformat(t1.ts,''yyyy-mm-dd hh:nn:ss.ssssss'') as nanoTs'
     endif;
 
