@@ -165,7 +165,8 @@ begin
     end if;
 
     if @ETag is not null then
-        if ar.versionFromETag(@ETag) = '1' then
+        if ar.versionFromETag(@ETag) = '1'
+        and isnull(util.getUserOption('ar.ts'), '0') = '0' then
             set @orderBy = 'left(ts,23) asc, id asc';
         else
             set @orderBy = 'ts';
