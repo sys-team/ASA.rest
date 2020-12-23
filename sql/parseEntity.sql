@@ -1,12 +1,16 @@
 create or replace function ar.parseEntity(
-    @entityName long varchar
-)
-returns long varchar
+    @entityName STRING
+) returns STRING deterministic
 begin
-    declare @result long varchar;
-    
-    set @result = '[' + left(@entityName, locate(@entityName,'.') -1) + '].[' + substr(@entityName, locate(@entityName,'.') +1) + ']';
-    
+    declare @result STRING;
+
+    set @result = string(
+        '[',
+        replace(@entityName, '.', '].['),
+        ']'
+    );
+
     return @result;
+
 end
 ;
